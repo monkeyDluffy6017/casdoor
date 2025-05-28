@@ -129,6 +129,7 @@ func SignUpWithPhone(phoneNum, CountryCode string) error {
 		Owner:       "built-in",
 		Name:        phoneNum,
 		CreatedTime: util.GetCurrentTime(),
+		UpdatedTime: util.GetCurrentTime(),
 		Id:          phoneNum,
 		DisplayName: phoneNum,
 		Type:        "normal-user",
