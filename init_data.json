@@ -443,7 +443,7 @@
   ],
   "providers": [
     {
-      "owner": "built-in",
+      "owner": "admin",
       "name": "provider-idtrust",
       "createdTime": "2025-01-01T00:00:00Z",
       "displayName": "IDTrust",
