@@ -27,16 +27,13 @@ jobs:
 
       # 运行 semantic-release 并捕获其输出
       - name: Release
-        id: semantic # 给这个步骤一个 ID
-        run: |
-          yarn global add semantic-release @semantic-release/github
-          # npx semantic-release 会将输出暴露给 steps context
-          # 我们使用 npx 以避免全局安装可能带来的路径问题
-          npx semantic-release
+        id: semantic # 保持 ID 不变
+        uses: cycjimmy/semantic-release-action@v4
         env:
+          # 传入 GitHub Token 用于发布 Release
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # 如果您使用 ghcr.io 作为 Docker 仓库，也需要这个 token
-          # GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 如果您未来需要推送到 npm，可以在这里加 NPM_TOKEN
+          # NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # 只有在新版本发布时才执行后续步骤
       - name: Log in to Docker Hub
