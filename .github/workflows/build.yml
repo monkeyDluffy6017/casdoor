@@ -17,6 +17,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # semantic-release 需要完整的 git 历史来分析提交
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -24,52 +25,38 @@ jobs:
         with:
           node-version: 20
 
-      - name: Get latest tag before release
-        id: get-previous-tag
-        uses: actions-ecosystem/action-get-latest-tag@v1
-
+      # 运行 semantic-release 并捕获其输出
       - name: Release
-        id: semantic
+        id: semantic # 给这个步骤一个 ID
         run: |
           yarn global add semantic-release @semantic-release/github
-          semantic-release
+          # npx semantic-release 会将输出暴露给 steps context
+          # 我们使用 npx 以避免全局安装可能带来的路径问题
+          npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 如果您使用 ghcr.io 作为 Docker 仓库，也需要这个 token
+          # GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get latest tag after release
-        id: get-current-tag
-        uses: actions-ecosystem/action-get-latest-tag@v1
-
-      # 比较前后两个 Tag，决定是否需要推送
-      - name: Decide to push
-        id: decide
-        run: |
-          if [ "${{ steps.get-previous-tag.outputs.tag }}" == "${{ steps.get-current-tag.outputs.tag }}" ]; then
-            echo "No new tag created. Skipping Docker push."
-            echo "do_push=false" >> $GITHUB_OUTPUT
-          else
-            echo "New tag ${{ steps.get-current-tag.outputs.tag }} created. Proceeding with Docker push."
-            echo "do_push=true" >> $GITHUB_OUTPUT
-          fi
-
-      # 只有在决定推送时才执行
+      # 只有在新版本发布时才执行后续步骤
       - name: Log in to Docker Hub
-        if: steps.decide.outputs.do_push == 'true'
+        # 直接检查 semantic 步骤的输出来决定是否运行
+        if: steps.semantic.outputs.new_release_published == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Set up QEMU
-        if: steps.decide.outputs.do_push == 'true'
+        if: steps.semantic.outputs.new_release_published == 'true'
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        if: steps.decide.outputs.do_push == 'true'
+        if: steps.semantic.outputs.new_release_published == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Push to Docker Hub
-        if: steps.decide.outputs.do_push == 'true'
+        if: steps.semantic.outputs.new_release_published == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -77,13 +64,14 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            levy001/casdoor:${{ steps.get-current-tag.outputs.tag }}
+            # 使用 semantic 步骤输出的新版本号
+            levy001/casdoor:${{ steps.semantic.outputs.new_release_version }}
             levy001/casdoor:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Push All In One Version to Docker Hub
-        if: steps.decide.outputs.do_push == 'true'
+        if: steps.semantic.outputs.new_release_published == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -91,7 +79,7 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            levy001/casdoor-all-in-one:${{ steps.get-current-tag.outputs.tag }}
+            levy001/casdoor-all-in-one:${{ steps.semantic.outputs.new_release_version }}
             levy001/casdoor-all-in-one:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
