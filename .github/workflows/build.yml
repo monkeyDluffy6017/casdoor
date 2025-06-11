@@ -17,7 +17,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # semantic-release 需要完整的 git 历史来分析提交
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -25,19 +24,13 @@ jobs:
         with:
           node-version: 20
 
-      # 运行 semantic-release 并捕获其输出
       - name: Release
-        id: semantic # 保持 ID 不变
+        id: semantic
         uses: cycjimmy/semantic-release-action@v4
         env:
-          # 传入 GitHub Token 用于发布 Release
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # 如果您未来需要推送到 npm，可以在这里加 NPM_TOKEN
-          # NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # 只有在新版本发布时才执行后续步骤
       - name: Log in to Docker Hub
-        # 直接检查 semantic 步骤的输出来决定是否运行
         if: steps.semantic.outputs.new_release_published == 'true'
         uses: docker/login-action@v3
         with:
@@ -61,7 +54,6 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            # 使用 semantic 步骤输出的新版本号
             levy001/casdoor:${{ steps.semantic.outputs.new_release_version }}
             levy001/casdoor:latest
           cache-from: type=gha
