@@ -161,5 +161,6 @@ func (idp *CustomIdProvider) processUserInfoResponse(dataMap map[string]interfac
 		Email:       customUserinfo.Email,
 		AvatarUrl:   customUserinfo.AvatarUrl,
 	}
+
 	return userInfo, nil
 }
