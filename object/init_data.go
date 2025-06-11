@@ -415,6 +415,7 @@ func initDefinedProvider(provider *Provider) {
 			panic("Fail to delete provider")
 		}
 	}
+	provider.CreatedTime = util.GetCurrentTime()
 	_, err = AddProvider(provider)
 	if err != nil {
 		panic(err)
