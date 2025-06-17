@@ -60,6 +60,7 @@ type User struct {
 
 	Id                string   `xorm:"varchar(100) index" json:"id"`
 	ExternalId        string   `xorm:"varchar(100) index" json:"externalId"`
+	UniversalId       string   `xorm:"varchar(100) index" json:"universalId"`
 	Type              string   `xorm:"varchar(100)" json:"type"`
 	Password          string   `xorm:"varchar(150)" json:"password"`
 	PasswordSalt      string   `xorm:"varchar(100)" json:"passwordSalt"`
@@ -834,6 +835,11 @@ func AddUser(user *User, lang string) (bool, error) {
 		user.Id = id
 	}
 
+	// 生成统一身份 UUID
+	if user.UniversalId == "" {
+		user.UniversalId = util.GenerateId()
+	}
+
 	if user.Owner == "" || user.Name == "" {
 		return false, fmt.Errorf(i18n.Translate(lang, "user:the user's owner and name should not be empty"))
 	}
@@ -916,8 +922,42 @@ func AddUser(user *User, lang string) (bool, error) {
 		user.Name = strings.ToLower(user.Name)
 	}
 
-	affected, err := ormer.Engine.Insert(user)
+	// 开始事务处理
+	session := ormer.Engine.NewSession()
+	defer session.Close()
+
+	if err := session.Begin(); err != nil {
+		return false, err
+	}
+
+	// 插入用户记录
+	affected, err := session.Insert(user)
 	if err != nil {
+		session.Rollback()
+		return false, err
+	}
+
+	// 创建统一身份记录
+	identity := &UnifiedIdentity{
+		Id:          user.UniversalId,
+		CreatedTime: util.GetCurrentTime(),
+		UpdatedTime: util.GetCurrentTime(),
+	}
+	_, err = session.Insert(identity)
+	if err != nil {
+		session.Rollback()
+		return false, err
+	}
+
+	// 创建认证方式绑定记录
+	err = createIdentityBindings(session, user, user.UniversalId)
+	if err != nil {
+		session.Rollback()
+		return false, err
+	}
+
+	// 提交事务
+	if err := session.Commit(); err != nil {
 		return false, err
 	}
 
