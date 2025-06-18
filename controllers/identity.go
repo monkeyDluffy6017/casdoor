@@ -102,7 +102,7 @@ func (c *ApiController) GetIdentityInfo() {
 	}
 
 	// 获取用户的所有身份绑定
-	bindings, err := object.GetUserIdentityBindingsByUnifiedId(claims.User.UniversalId)
+	bindings, err := object.GetUserIdentityBindingsByUniversalId(claims.User.UniversalId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return

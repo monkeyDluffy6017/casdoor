@@ -937,18 +937,6 @@ func AddUser(user *User, lang string) (bool, error) {
 		return false, err
 	}
 
-	// 创建统一身份记录
-	identity := &UnifiedIdentity{
-		Id:          user.UniversalId,
-		CreatedTime: util.GetCurrentTime(),
-		UpdatedTime: util.GetCurrentTime(),
-	}
-	_, err = session.Insert(identity)
-	if err != nil {
-		session.Rollback()
-		return false, err
-	}
-
 	// 创建认证方式绑定记录
 	err = createIdentityBindings(session, user, user.UniversalId)
 	if err != nil {

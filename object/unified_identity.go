@@ -22,17 +22,10 @@ import (
 	"github.com/xorm-io/xorm"
 )
 
-// 统一身份结构（极简版）
-type UnifiedIdentity struct {
-	Id          string `xorm:"varchar(100) pk" json:"id"`
-	CreatedTime string `xorm:"varchar(100)" json:"createdTime"`
-	UpdatedTime string `xorm:"varchar(100)" json:"updatedTime"`
-}
-
-// 用户身份绑定结构（极简版）
+// 用户身份绑定结构（直接使用 User 表的 UniversalId）
 type UserIdentityBinding struct {
 	Id          string `xorm:"varchar(100) pk" json:"id"`
-	UnifiedId   string `xorm:"varchar(100)" json:"unifiedId"`
+	UniversalId string `xorm:"varchar(100)" json:"universalId"`
 	AuthType    string `xorm:"varchar(50)" json:"authType"`
 	AuthValue   string `xorm:"varchar(255)" json:"authValue"`
 	CreatedTime string `xorm:"varchar(100)" json:"createdTime"`
@@ -51,44 +44,6 @@ type AuthMethod struct {
 	AuthValue string `json:"auth_value"`
 }
 
-// 统一身份操作
-func AddUnifiedIdentity(identity *UnifiedIdentity) (bool, error) {
-	affected, err := ormer.Engine.Insert(identity)
-	if err != nil {
-		return false, err
-	}
-	return affected != 0, nil
-}
-
-func GetUnifiedIdentity(id string) (*UnifiedIdentity, error) {
-	identity := &UnifiedIdentity{}
-	has, err := ormer.Engine.Where("id = ?", id).Get(identity)
-	if err != nil {
-		return nil, err
-	}
-	if !has {
-		return nil, nil
-	}
-	return identity, nil
-}
-
-func UpdateUnifiedIdentity(id string, identity *UnifiedIdentity) (bool, error) {
-	identity.UpdatedTime = util.GetCurrentTime()
-	affected, err := ormer.Engine.Where("id = ?", id).Update(identity)
-	if err != nil {
-		return false, err
-	}
-	return affected != 0, nil
-}
-
-func DeleteUnifiedIdentity(id string) (bool, error) {
-	affected, err := ormer.Engine.Where("id = ?", id).Delete(&UnifiedIdentity{})
-	if err != nil {
-		return false, err
-	}
-	return affected != 0, nil
-}
-
 // 用户身份绑定操作
 func AddUserIdentityBinding(binding *UserIdentityBinding) (bool, error) {
 	affected, err := ormer.Engine.Insert(binding)
@@ -98,9 +53,9 @@ func AddUserIdentityBinding(binding *UserIdentityBinding) (bool, error) {
 	return affected != 0, nil
 }
 
-func GetUserIdentityBindingsByUnifiedId(unifiedId string) ([]*UserIdentityBinding, error) {
+func GetUserIdentityBindingsByUniversalId(universalId string) ([]*UserIdentityBinding, error) {
 	bindings := []*UserIdentityBinding{}
-	err := ormer.Engine.Where("unified_id = ?", unifiedId).Find(&bindings)
+	err := ormer.Engine.Where("universal_id = ?", universalId).Find(&bindings)
 	return bindings, err
 }
 
@@ -124,8 +79,8 @@ func DeleteUserIdentityBinding(id string) (bool, error) {
 	return affected != 0, nil
 }
 
-func DeleteUserIdentityBindingsByUnifiedId(unifiedId string) (bool, error) {
-	affected, err := ormer.Engine.Where("unified_id = ?", unifiedId).Delete(&UserIdentityBinding{})
+func DeleteUserIdentityBindingsByUniversalId(universalId string) (bool, error) {
+	affected, err := ormer.Engine.Where("universal_id = ?", universalId).Delete(&UserIdentityBinding{})
 	if err != nil {
 		return false, err
 	}
@@ -133,9 +88,9 @@ func DeleteUserIdentityBindingsByUnifiedId(unifiedId string) (bool, error) {
 }
 
 // 检查认证方式是否存在
-func checkAuthMethodExists(session *xorm.Session, unifiedId, authType, authValue string) (bool, error) {
-	count, err := session.Where("unified_id = ? AND auth_type = ? AND auth_value = ?",
-		unifiedId, authType, authValue).Count(&UserIdentityBinding{})
+func checkAuthMethodExists(session *xorm.Session, universalId, authType, authValue string) (bool, error) {
+	count, err := session.Where("universal_id = ? AND auth_type = ? AND auth_value = ?",
+		universalId, authType, authValue).Count(&UserIdentityBinding{})
 	return count > 0, err
 }
 
@@ -155,7 +110,7 @@ func getUserByUniversalId(universalId string) (*User, error) {
 // 获取用户的认证信息（手机号和GitHub账号）
 func getUserAuthInfo(universalId string) (phoneNumber string, githubAccount string, err error) {
 	bindings := []*UserIdentityBinding{}
-	err = ormer.Engine.Where("unified_id = ?", universalId).Find(&bindings)
+	err = ormer.Engine.Where("universal_id = ?", universalId).Find(&bindings)
 	if err != nil {
 		return "", "", err
 	}
@@ -173,14 +128,14 @@ func getUserAuthInfo(universalId string) (phoneNumber string, githubAccount stri
 }
 
 // 创建用户时的身份绑定
-func createIdentityBindings(session *xorm.Session, user *User, unifiedId string) error {
+func createIdentityBindings(session *xorm.Session, user *User, universalId string) error {
 	bindings := []*UserIdentityBinding{}
 
 	// GitHub 认证
 	if user.GitHub != "" {
 		bindings = append(bindings, &UserIdentityBinding{
 			Id:          util.GenerateId(),
-			UnifiedId:   unifiedId,
+			UniversalId: universalId,
 			AuthType:    "github",
 			AuthValue:   user.GitHub,
 			CreatedTime: util.GetCurrentTime(),
@@ -191,7 +146,7 @@ func createIdentityBindings(session *xorm.Session, user *User, unifiedId string)
 	if user.Phone != "" {
 		bindings = append(bindings, &UserIdentityBinding{
 			Id:          util.GenerateId(),
-			UnifiedId:   unifiedId,
+			UniversalId: universalId,
 			AuthType:    "phone",
 			AuthValue:   user.Phone,
 			CreatedTime: util.GetCurrentTime(),
@@ -202,7 +157,7 @@ func createIdentityBindings(session *xorm.Session, user *User, unifiedId string)
 	if user.Email != "" {
 		bindings = append(bindings, &UserIdentityBinding{
 			Id:          util.GenerateId(),
-			UnifiedId:   unifiedId,
+			UniversalId: universalId,
 			AuthType:    "email",
 			AuthValue:   user.Email,
 			CreatedTime: util.GetCurrentTime(),
@@ -213,7 +168,7 @@ func createIdentityBindings(session *xorm.Session, user *User, unifiedId string)
 	if user.Password != "" {
 		bindings = append(bindings, &UserIdentityBinding{
 			Id:          util.GenerateId(),
-			UnifiedId:   unifiedId,
+			UniversalId: universalId,
 			AuthType:    "password",
 			AuthValue:   fmt.Sprintf("%s/%s", user.Owner, user.Name), // owner/name 作为认证值
 			CreatedTime: util.GetCurrentTime(),
@@ -224,7 +179,7 @@ func createIdentityBindings(session *xorm.Session, user *User, unifiedId string)
 	if user.Google != "" {
 		bindings = append(bindings, &UserIdentityBinding{
 			Id:          util.GenerateId(),
-			UnifiedId:   unifiedId,
+			UniversalId: universalId,
 			AuthType:    "google",
 			AuthValue:   user.Google,
 			CreatedTime: util.GetCurrentTime(),
@@ -234,7 +189,7 @@ func createIdentityBindings(session *xorm.Session, user *User, unifiedId string)
 	if user.WeChat != "" {
 		bindings = append(bindings, &UserIdentityBinding{
 			Id:          util.GenerateId(),
-			UnifiedId:   unifiedId,
+			UniversalId: universalId,
 			AuthType:    "wechat",
 			AuthValue:   user.WeChat,
 			CreatedTime: util.GetCurrentTime(),
@@ -244,7 +199,7 @@ func createIdentityBindings(session *xorm.Session, user *User, unifiedId string)
 	if user.QQ != "" {
 		bindings = append(bindings, &UserIdentityBinding{
 			Id:          util.GenerateId(),
-			UnifiedId:   unifiedId,
+			UniversalId: universalId,
 			AuthType:    "qq",
 			AuthValue:   user.QQ,
 			CreatedTime: util.GetCurrentTime(),
@@ -254,7 +209,7 @@ func createIdentityBindings(session *xorm.Session, user *User, unifiedId string)
 	if user.Facebook != "" {
 		bindings = append(bindings, &UserIdentityBinding{
 			Id:          util.GenerateId(),
-			UnifiedId:   unifiedId,
+			UniversalId: universalId,
 			AuthType:    "facebook",
 			AuthValue:   user.Facebook,
 			CreatedTime: util.GetCurrentTime(),
@@ -264,7 +219,7 @@ func createIdentityBindings(session *xorm.Session, user *User, unifiedId string)
 	if user.DingTalk != "" {
 		bindings = append(bindings, &UserIdentityBinding{
 			Id:          util.GenerateId(),
-			UnifiedId:   unifiedId,
+			UniversalId: universalId,
 			AuthType:    "dingtalk",
 			AuthValue:   user.DingTalk,
 			CreatedTime: util.GetCurrentTime(),
@@ -274,7 +229,7 @@ func createIdentityBindings(session *xorm.Session, user *User, unifiedId string)
 	if user.Weibo != "" {
 		bindings = append(bindings, &UserIdentityBinding{
 			Id:          util.GenerateId(),
-			UnifiedId:   unifiedId,
+			UniversalId: universalId,
 			AuthType:    "weibo",
 			AuthValue:   user.Weibo,
 			CreatedTime: util.GetCurrentTime(),
@@ -322,7 +277,7 @@ func MergeUsers(reservedUserToken, deletedUserToken string) (*MergeResult, error
 	}
 
 	// 4. 获取要删除用户的所有身份绑定
-	deletedBindings, err := GetUserIdentityBindingsByUnifiedId(deletedUser.UniversalId)
+	deletedBindings, err := GetUserIdentityBindingsByUniversalId(deletedUser.UniversalId)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +305,7 @@ func MergeUsers(reservedUserToken, deletedUserToken string) (*MergeResult, error
 			// 创建新的绑定记录
 			newBinding := &UserIdentityBinding{
 				Id:          util.GenerateId(),
-				UnifiedId:   reservedUser.UniversalId,
+				UniversalId: reservedUser.UniversalId,
 				AuthType:    binding.AuthType,
 				AuthValue:   binding.AuthValue,
 				CreatedTime: util.GetCurrentTime(),
@@ -369,27 +324,20 @@ func MergeUsers(reservedUserToken, deletedUserToken string) (*MergeResult, error
 	}
 
 	// 7. 删除被删除用户的所有绑定记录
-	_, err = session.Where("unified_id = ?", deletedUser.UniversalId).Delete(&UserIdentityBinding{})
+	_, err = session.Where("universal_id = ?", deletedUser.UniversalId).Delete(&UserIdentityBinding{})
 	if err != nil {
 		session.Rollback()
 		return nil, err
 	}
 
-	// 8. 删除被删除用户的统一身份记录
-	_, err = session.Where("id = ?", deletedUser.UniversalId).Delete(&UnifiedIdentity{})
-	if err != nil {
-		session.Rollback()
-		return nil, err
-	}
-
-	// 9. 删除被删除用户记录
+	// 8. 删除被删除用户记录
 	_, err = session.Delete(deletedUser)
 	if err != nil {
 		session.Rollback()
 		return nil, err
 	}
 
-	// 10. 提交事务
+	// 9. 提交事务
 	if err := session.Commit(); err != nil {
 		return nil, err
 	}
@@ -433,7 +381,7 @@ func LoginWithUnifiedIdentity(authType, authValue, password string) (*User, erro
 	}
 
 	// 通过统一身份ID获取用户
-	user, err := getUserByUniversalId(binding.UnifiedId)
+	user, err := getUserByUniversalId(binding.UniversalId)
 	if err != nil {
 		return nil, err
 	}
