@@ -1,24 +1,24 @@
-# GitHub OAuth 回调处理服务
+# GitHub OAuth Callback Handler Service
 
-这是一个专门用于处理 GitHub OAuth 2.0 授权回调的 Go 微服务。
+This is a Go microservice specifically designed to handle GitHub OAuth 2.0 authorization callbacks.
 
-## 功能特性
+## Features
 
-- 🔗 专注于 GitHub OAuth 回调处理
-- 📱 支持 GET 和 POST 请求
-- 🔐 安全的授权码处理
-- 📊 JSON 格式的响应数据
-- 🔍 详细的日志输出便于调试
-- 🏥 健康检查接口
+- 🔗 Focused on GitHub OAuth callback handling
+- 📱 Supports both GET and POST requests
+- 🔐 Secure authorization code processing
+- 📊 JSON formatted response data
+- 🔍 Detailed logging output for debugging
+- 🏥 Health check endpoint
 
-## API 接口
+## API Endpoints
 
-### 1. 健康检查
+### 1. Health Check
 ```
 GET /health
 ```
 
-响应：
+Response:
 ```json
 {
   "status": "ok",
@@ -27,20 +27,20 @@ GET /health
 }
 ```
 
-### 2. GitHub OAuth 回调处理
+### 2. GitHub OAuth Callback Handler
 ```
 GET|POST /auth/github/callback
 ```
 
-参数：
-- `code` (必需) - GitHub 授权码
-- `state` (可选) - 状态参数
+Parameters:
+- `code` (required) - GitHub authorization code
+- `state` (optional) - State parameter
 
-成功响应：
+Success Response:
 ```json
 {
   "success": true,
-  "message": "GitHub OAuth 处理成功",
+  "message": "GitHub OAuth processing successful",
   "user": {
     "id": 12345,
     "login": "username",
@@ -56,43 +56,43 @@ GET|POST /auth/github/callback
 }
 ```
 
-错误响应：
+Error Response:
 ```json
 {
   "success": false,
-  "message": "处理失败",
-  "error": "错误详情"
+  "message": "Processing failed",
+  "error": "Error details"
 }
 ```
 
-## 使用前准备
+## Prerequisites
 
-### 1. 设置环境变量
+### 1. Set Environment Variables
 
 ```bash
-export GITHUB_CLIENT_ID="你的Client ID"
-export GITHUB_CLIENT_SECRET="你的Client Secret"
+export GITHUB_CLIENT_ID="your Client ID"
+export GITHUB_CLIENT_SECRET="your Client Secret"
 ```
 
-或者在 Windows 上：
+Or on Windows:
 
 ```cmd
-set GITHUB_CLIENT_ID=你的Client ID
-set GITHUB_CLIENT_SECRET=你的Client Secret
+set GITHUB_CLIENT_ID=your Client ID
+set GITHUB_CLIENT_SECRET=your Client Secret
 ```
 
-### 2. 创建 GitHub OAuth 应用（可选）
+### 2. Create GitHub OAuth App (Optional)
 
-如果你需要创建新的 GitHub OAuth 应用：
+If you need to create a new GitHub OAuth application:
 
-1. 访问 [GitHub Developer Settings](https://github.com/settings/developers)
-2. 点击 "New OAuth App"
-3. 填写应用信息
-4. 记录 `Client ID` 和 `Client Secret`
+1. Visit [GitHub Developer Settings](https://github.com/settings/developers)
+2. Click "New OAuth App"
+3. Fill in application information
+4. Record the `Client ID` and `Client Secret`
 
-## 运行方式
+## Running the Service
 
-### 方法一：直接运行
+### Method 1: Direct Run
 
 ```bash
 cd test/github-oauth-test
@@ -100,14 +100,14 @@ go mod tidy
 go run main.go
 ```
 
-### 方法二：使用启动脚本
+### Method 2: Using Start Script
 
 ```bash
 cd test/github-oauth-test
 ./start.sh
 ```
 
-### 方法三：编译后运行
+### Method 3: Build and Run
 
 ```bash
 cd test/github-oauth-test
@@ -115,64 +115,64 @@ go build -o github-oauth-test
 ./github-oauth-test
 ```
 
-## 测试方法
+## Testing Methods
 
-### 1. 健康检查
+### 1. Health Check
 
 ```bash
 curl http://localhost:8080/health
 ```
 
-### 2. 测试回调接口
+### 2. Test Callback Endpoint
 
-#### 使用 GET 请求
+#### Using GET request
 ```bash
 curl "http://localhost:8080/auth/github/callback?code=YOUR_GITHUB_AUTH_CODE"
 ```
 
-#### 使用 POST 请求
+#### Using POST request
 ```bash
 curl -X POST "http://localhost:8080/auth/github/callback" \
      -d "code=YOUR_GITHUB_AUTH_CODE"
 ```
 
-#### 使用 curl 发送表单数据
+#### Using curl to send form data
 ```bash
 curl -X POST "http://localhost:8080/auth/github/callback" \
      -H "Content-Type: application/x-www-form-urlencoded" \
      -d "code=YOUR_GITHUB_AUTH_CODE&state=optional_state"
 ```
 
-## 调试信息
+## Debug Information
 
-服务会在控制台输出详细的日志信息，包括：
+The service outputs detailed log information to the console, including:
 
-- 📨 接收到的回调请求信息（请求方法、授权码等）
-- ✅ 授权码和访问令牌获取过程
-- 👤 用户信息获取过程
-- ❌ 任何错误信息
+- 📨 Received callback request information (request method, authorization code, etc.)
+- ✅ Authorization code and access token acquisition process
+- 👤 User information retrieval process
+- ❌ Any error messages
 
-## 获取的用户信息
+## Retrieved User Information
 
-- 用户 ID
-- 用户名 (login)
-- 显示名称 (name)
-- 邮箱地址（包括私有邮箱）
-- 头像 URL
-- 公司信息
-- 位置信息
-- 个人简介
-- 博客链接
+- User ID
+- Username (login)
+- Display name (name)
+- Email address (including private emails)
+- Avatar URL
+- Company information
+- Location information
+- Biography
+- Blog link
 
-## 安全说明
+## Security Notes
 
-- 支持状态参数验证
-- 授权码和访问令牌在日志中会被脱敏显示
-- 支持获取用户的私有邮箱地址
+- Supports state parameter validation
+- Authorization codes and access tokens are masked in logs
+- Supports retrieving user's private email addresses
 
-## 集成示例
+## Integration Example
 
-### 在其他应用中调用
+### Calling from Other Applications
 
 ```go
 package main
@@ -186,11 +186,11 @@ import (
 )
 
 func handleGitHubCallback(code string) error {
-    // 构造请求数据
+    // Construct request data
     data := url.Values{}
     data.Set("code", code)
 
-    // 发送请求到回调服务
+    // Send request to callback service
     resp, err := http.Post(
         "http://localhost:8080/auth/github/callback",
         "application/x-www-form-urlencoded",
@@ -199,76 +199,94 @@ func handleGitHubCallback(code string) error {
     if err != nil {
         return err
     }
-    defer resp.Body.Close()
 
-    // 解析响应
+    // Process response
+    defer resp.Body.Close()
     var result map[string]interface{}
     if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
         return err
     }
 
-    if result["success"].(bool) {
-        user := result["user"].(map[string]interface{})
-        fmt.Printf("用户登录成功: %s\n", user["login"])
-    } else {
-        fmt.Printf("登录失败: %s\n", result["error"])
+    if success, ok := result["success"].(bool); ok && success {
+        fmt.Println("GitHub OAuth successful")
+        return nil
     }
 
-    return nil
+    return fmt.Errorf("OAuth failed")
 }
 ```
 
-### JavaScript/前端调用
+## Environment Configuration
 
-```javascript
-async function handleGitHubCallback(code) {
-    try {
-        const response = await fetch('http://localhost:8080/auth/github/callback', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `code=${encodeURIComponent(code)}`
-        });
+Create an `.env` file (copy from `env.example`):
 
-        const result = await response.json();
-
-        if (result.success) {
-            console.log('用户登录成功:', result.user);
-            // 处理用户信息
-        } else {
-            console.error('登录失败:', result.error);
-        }
-    } catch (error) {
-        console.error('请求失败:', error);
-    }
-}
+```bash
+cp env.example .env
 ```
 
-## 故障排除
+Edit the `.env` file with your GitHub OAuth credentials:
 
-### 常见问题
+```
+GITHUB_CLIENT_ID=your_client_id_here
+GITHUB_CLIENT_SECRET=your_client_secret_here
+```
 
-1. **环境变量未设置**
-   ```
-   请设置 GITHUB_CLIENT_ID 和 GITHUB_CLIENT_SECRET 环境变量
-   ```
+## Error Handling
 
-2. **授权码无效**
-   - 确保授权码是从 GitHub OAuth 流程中获取的
-   - 授权码只能使用一次，过期后需要重新获取
+The service handles various error scenarios:
 
-3. **获取用户邮箱失败**
-   - 某些用户可能设置了邮箱隐私保护
-   - 服务会尝试获取用户的私有邮箱列表
+- Missing authorization code
+- Invalid authorization code
+- GitHub API failures
+- Network connectivity issues
+- Invalid client credentials
 
-## 依赖包
+## Logging
 
-- `golang.org/x/oauth2`: OAuth 2.0 客户端实现
-- `golang.org/x/oauth2/github`: GitHub OAuth 端点配置
+All requests and responses are logged with appropriate log levels:
 
-## 参考资料
+- `INFO`: Normal operation logs
+- `ERROR`: Error conditions
+- `DEBUG`: Detailed debugging information
 
-- [GitHub OAuth Apps 文档](https://docs.github.com/en/developers/apps/building-oauth-apps)
-- [GitHub REST API 文档](https://docs.github.com/en/rest)
-- [OAuth 2.0 规范](https://tools.ietf.org/html/rfc6749)
+## Development
+
+### Project Structure
+
+```
+github-oauth-test/
+├── main.go              # Main application
+├── README.md           # This documentation
+├── env.example         # Environment variable template
+├── start.sh           # Startup script
+└── go.mod             # Go module file
+```
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Invalid client credentials**: Verify your `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`
+2. **Authorization code expired**: GitHub authorization codes expire quickly, use them immediately
+3. **Network issues**: Check your internet connection and GitHub API status
+
+### Getting Help
+
+If you encounter issues:
+
+1. Check the console logs for detailed error messages
+2. Verify your GitHub OAuth app configuration
+3. Ensure environment variables are set correctly
+4. Test with a fresh authorization code
+
+## License
+
+This project is part of the Casdoor authentication system and follows the same licensing terms.

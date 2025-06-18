@@ -796,27 +796,27 @@ func StringArrayToUser(stringArray [][]string) ([]*User, error) {
 	return users, nil
 }
 
-// GetUserByFieldWithUnifiedIdentity - 通过字段查找用户（优先使用统一身份绑定）
+// GetUserByFieldWithUnifiedIdentity - Find user by field (prioritize unified identity binding)
 func GetUserByFieldWithUnifiedIdentity(organizationName string, field string, value string) (*User, error) {
-	// 首先尝试通过统一身份绑定查找
-	// 将field转换为小写以匹配存储的authType格式
+	// First try to find through unified identity binding
+	// Convert field to lowercase to match stored authType format
 	binding, err := GetUserIdentityBindingByAuth(strings.ToLower(field), value)
 	if err != nil {
 		return nil, err
 	}
 
 	if binding != nil {
-		// 通过统一身份绑定找到用户
+		// Found user through unified identity binding
 		user, err := getUserByUniversalId(binding.UniversalId)
 		if err != nil {
 			return nil, err
 		}
-		// 确保用户属于正确的组织
+		// Ensure user belongs to the correct organization
 		if user.Owner == organizationName {
 			return user, nil
 		}
 	}
 
-	// 如果统一身份绑定没找到，回退到老方法
+	// If unified identity binding not found, fallback to old method
 	return GetUserByField(organizationName, field, value)
 }

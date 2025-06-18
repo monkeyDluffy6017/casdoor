@@ -32,14 +32,14 @@ import (
 // @Failure 401 Unauthorized
 // @router /identity/merge [post]
 func (c *ApiController) MergeUsers() {
-	// 从 Authorization 头获取 Bearer token
+	// Get Bearer token from Authorization header
 	authHeader := c.Ctx.Request.Header.Get("Authorization")
 	if authHeader == "" {
 		c.ResponseError("Authorization header required")
 		return
 	}
 
-	// 解析 Bearer token
+	// Parse Bearer token
 	parts := strings.Split(authHeader, " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {
 		c.ResponseError("Invalid authorization header format. Expected: Bearer <token>")
@@ -48,7 +48,7 @@ func (c *ApiController) MergeUsers() {
 
 	token := parts[1]
 
-	// 解析token获取用户信息
+	// Parse token to get user information
 	claims, err := object.ParseJwtTokenByApplication(token, nil)
 	if err != nil {
 		c.ResponseError("Invalid token")
@@ -71,8 +71,8 @@ func (c *ApiController) MergeUsers() {
 		return
 	}
 
-	// 验证当前用户有权限进行合并操作
-	// 1. 检查当前用户是否是其中一个token对应的用户
+	// Verify current user has permission to perform merge operation
+	// 1. Check if current user is one of the users corresponding to the tokens
 	reservedClaims, err := object.ParseJwtTokenByApplication(request.ReservedUserToken, nil)
 	if err != nil {
 		c.ResponseError("Invalid reserved_user_token")
@@ -85,7 +85,7 @@ func (c *ApiController) MergeUsers() {
 		return
 	}
 
-	// 当前用户必须是要保留的用户或者要删除的用户之一
+	// Current user must be either the user to be preserved or the user to be deleted
 	currentUserId := claims.User.Name
 	if currentUserId != reservedClaims.User.Name && currentUserId != deletedClaims.User.Name {
 		c.ResponseError("Unauthorized: You can only merge accounts you own")
@@ -117,14 +117,14 @@ func (c *ApiController) MergeUsers() {
 // @Failure 401 Unauthorized
 // @router /identity/info [get]
 func (c *ApiController) GetIdentityInfo() {
-	// 从 Authorization 头获取 Bearer token
+	// Get Bearer token from Authorization header
 	authHeader := c.Ctx.Request.Header.Get("Authorization")
 	if authHeader == "" {
 		c.ResponseError("Authorization header required")
 		return
 	}
 
-	// 解析 Bearer token
+	// Parse Bearer token
 	parts := strings.Split(authHeader, " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {
 		c.ResponseError("Invalid authorization header format. Expected: Bearer <token>")
@@ -133,7 +133,7 @@ func (c *ApiController) GetIdentityInfo() {
 
 	token := parts[1]
 
-	// 解析token获取用户信息
+	// Parse token to get user information
 	claims, err := object.ParseJwtTokenByApplication(token, nil)
 	if err != nil {
 		c.ResponseError("Invalid token")
@@ -145,7 +145,7 @@ func (c *ApiController) GetIdentityInfo() {
 		return
 	}
 
-	// 获取用户的所有身份绑定
+	// Get all identity bindings for the user
 	bindings, err := object.GetUserIdentityBindingsByUniversalId(claims.UniversalId)
 	if err != nil {
 		c.ResponseError(err.Error())
@@ -178,14 +178,14 @@ func (c *ApiController) GetIdentityInfo() {
 // @Failure 401 Unauthorized
 // @router /identity/bind [post]
 func (c *ApiController) BindAuthMethod() {
-	// 从 Authorization 头获取 Bearer token
+	// Get Bearer token from Authorization header
 	authHeader := c.Ctx.Request.Header.Get("Authorization")
 	if authHeader == "" {
 		c.ResponseError("Authorization header required")
 		return
 	}
 
-	// 解析 Bearer token
+	// Parse Bearer token
 	parts := strings.Split(authHeader, " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {
 		c.ResponseError("Invalid authorization header format. Expected: Bearer <token>")
@@ -194,7 +194,7 @@ func (c *ApiController) BindAuthMethod() {
 
 	token := parts[1]
 
-	// 解析token获取用户信息
+	// Parse token to get user information
 	claims, err := object.ParseJwtTokenByApplication(token, nil)
 	if err != nil {
 		c.ResponseError("Invalid token")
@@ -222,7 +222,7 @@ func (c *ApiController) BindAuthMethod() {
 		return
 	}
 
-	// 绑定新的认证方式
+	// Bind new authentication method
 	binding, err := object.AddUserIdentityBindingForUser(claims.UniversalId, request.AuthType, request.AuthValue)
 	if err != nil {
 		c.ResponseError(err.Error())

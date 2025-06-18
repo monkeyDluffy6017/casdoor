@@ -33,9 +33,9 @@ type Claims struct {
 	// the `azp` (Authorized Party) claim. Optional. See https://openid.net/specs/openid-connect-core-1_0.html#IDToken
 	Azp           string `json:"azp,omitempty"`
 	Provider      string `json:"provider,omitempty"`
-	UniversalId   string `json:"universal_id,omitempty"`   // 统一用户 UUID
-	PhoneNumber   string `json:"phone_number,omitempty"`   // 用户手机号
-	GithubAccount string `json:"github_account,omitempty"` // 用户 GitHub 账号
+	UniversalId   string `json:"universal_id,omitempty"`   // Unified user UUID
+	PhoneNumber   string `json:"phone_number,omitempty"`   // User phone number
+	GithubAccount string `json:"github_account,omitempty"` // User GitHub account
 	jwt.RegisteredClaims
 }
 
@@ -176,9 +176,9 @@ type ClaimsWithoutThirdIdp struct {
 	Scope         string `json:"scope,omitempty"`
 	Azp           string `json:"azp,omitempty"`
 	Provider      string `json:"provider,omitempty"`
-	UniversalId   string `json:"universal_id,omitempty"`   // 统一用户 UUID
-	PhoneNumber   string `json:"phone_number,omitempty"`   // 用户手机号
-	GithubAccount string `json:"github_account,omitempty"` // 用户 GitHub 账号
+	UniversalId   string `json:"universal_id,omitempty"`   // Unified user UUID
+	PhoneNumber   string `json:"phone_number,omitempty"`   // User phone number
+	GithubAccount string `json:"github_account,omitempty"` // User GitHub account
 	jwt.RegisteredClaims
 }
 
@@ -400,7 +400,7 @@ func generateJwtToken(application *Application, user *User, provider string, non
 	name := util.GenerateId()
 	jti := util.GetId(application.Owner, name)
 
-	// 获取用户的认证信息（手机号和 GitHub 账号）
+	// Get user's authentication information (phone number and GitHub account)
 	phoneNumber, githubAccount, err := getUserAuthInfo(user.UniversalId)
 	if err != nil {
 		return "", "", "", err
@@ -420,7 +420,7 @@ func generateJwtToken(application *Application, user *User, provider string, non
 		GithubAccount: githubAccount,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    originBackend,
-			Subject:   user.UniversalId, // 使用统一 UUID 作为 subject
+			Subject:   user.UniversalId, // Use unified UUID as subject
 			Audience:  []string{application.ClientId},
 			ExpiresAt: jwt.NewNumericDate(expireTime),
 			NotBefore: jwt.NewNumericDate(nowTime),

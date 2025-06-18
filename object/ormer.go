@@ -428,7 +428,7 @@ func (a *Ormer) createTable() {
 		panic(err)
 	}
 
-	// 统一身份相关的表
+	// Tables related to unified identity
 	err = a.Engine.Sync2(new(UserIdentityBinding))
 	if err != nil {
 		panic(err)
