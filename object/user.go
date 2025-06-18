@@ -1118,7 +1118,28 @@ func GetUserInfo(user *User, scope string, aud string, host string) (*Userinfo, 
 }
 
 func LinkUserAccount(user *User, field string, value string) (bool, error) {
-	return SetUserField(user, field, value)
+	// 首先设置用户字段
+	affected, err := SetUserField(user, field, value)
+	if err != nil {
+		return false, err
+	}
+
+	// 如果是清空操作（value为空），则删除对应的身份绑定
+	if value == "" {
+		err = RemoveUserIdentityBindingForUser(user.UniversalId, strings.ToLower(field))
+		if err != nil {
+			return false, err
+		}
+		return affected, nil
+	}
+
+	// 创建或更新统一身份绑定记录
+	_, err = AddUserIdentityBindingForUser(user.UniversalId, strings.ToLower(field), value)
+	if err != nil {
+		return false, err
+	}
+
+	return affected, nil
 }
 
 func (user *User) GetId() string {

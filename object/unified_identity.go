@@ -207,6 +207,18 @@ func getProviderValue(user *User, providerType string) string {
 		return ""
 	case "ldap":
 		return user.Ldap
+	case "custom":
+		// 首先检查用户的Custom字段
+		if user.Custom != "" {
+			return user.Custom
+		}
+		// 如果Custom字段为空，从Properties中获取
+		if user.Properties != nil {
+			if id := user.Properties["oauth_Custom_id"]; id != "" {
+				return id
+			}
+		}
+		return ""
 	default:
 		// 对于其他provider类型，尝试从Properties中获取
 		if user.Properties != nil {

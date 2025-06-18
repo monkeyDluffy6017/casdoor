@@ -799,7 +799,8 @@ func StringArrayToUser(stringArray [][]string) ([]*User, error) {
 // GetUserByFieldWithUnifiedIdentity - 通过字段查找用户（优先使用统一身份绑定）
 func GetUserByFieldWithUnifiedIdentity(organizationName string, field string, value string) (*User, error) {
 	// 首先尝试通过统一身份绑定查找
-	binding, err := GetUserIdentityBindingByAuth(field, value)
+	// 将field转换为小写以匹配存储的authType格式
+	binding, err := GetUserIdentityBindingByAuth(strings.ToLower(field), value)
 	if err != nil {
 		return nil, err
 	}
