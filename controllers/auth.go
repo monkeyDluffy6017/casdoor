@@ -867,10 +867,10 @@ func (c *ApiController) Login() {
 					}
 
 					var affected bool
-					// 为了解决GitHub API权限不足时无法创建身份绑定的问题
-					// 先设置OAuth属性，然后再创建用户
+					// To solve the problem that identity binding cannot be created due to insufficient GitHub API permissions
+					// Set OAuth properties first, then create the user
 					if userInfo.Id != "" {
-						// 预先设置OAuth ID到Properties中
+						// Pre-set OAuth ID to Properties
 						if user.Properties == nil {
 							user.Properties = make(map[string]string)
 						}

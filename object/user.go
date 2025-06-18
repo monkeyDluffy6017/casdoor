@@ -839,7 +839,7 @@ func AddUser(user *User, lang string, primaryProvider string) (bool, error) {
 		user.Id = id
 	}
 
-	// 生成统一身份 UUID
+	// Generate unified identity UUID
 	if user.UniversalId == "" {
 		user.UniversalId = util.GenerateId()
 	}
@@ -932,7 +932,7 @@ func AddUser(user *User, lang string, primaryProvider string) (bool, error) {
 		user.Name = strings.ToLower(user.Name)
 	}
 
-	// 开始事务处理
+	// Start transaction processing
 	session := ormer.Engine.NewSession()
 	defer session.Close()
 
@@ -940,21 +940,21 @@ func AddUser(user *User, lang string, primaryProvider string) (bool, error) {
 		return false, err
 	}
 
-	// 插入用户记录
+	// Insert user record
 	affected, err := session.Insert(user)
 	if err != nil {
 		session.Rollback()
 		return false, err
 	}
 
-	// 创建认证方式绑定记录，传递主要登录方式信息
+	// Create authentication method binding records, passing primary login method information
 	err = createIdentityBindings(session, user, user.UniversalId, primaryProvider)
 	if err != nil {
 		session.Rollback()
 		return false, err
 	}
 
-	// 提交事务
+	// Commit transaction
 	if err := session.Commit(); err != nil {
 		return false, err
 	}
@@ -1119,13 +1119,13 @@ func GetUserInfo(user *User, scope string, aud string, host string) (*Userinfo, 
 }
 
 func LinkUserAccount(user *User, field string, value string) (bool, error) {
-	// 首先设置用户字段
+	// First set user field
 	affected, err := SetUserField(user, field, value)
 	if err != nil {
 		return false, err
 	}
 
-	// 如果是清空操作（value为空），则删除对应的身份绑定
+	// If it's a clear operation (value is empty), delete the corresponding identity binding
 	if value == "" {
 		err = RemoveUserIdentityBindingForUser(user.UniversalId, strings.ToLower(field))
 		if err != nil {
@@ -1134,7 +1134,7 @@ func LinkUserAccount(user *User, field string, value string) (bool, error) {
 		return affected, nil
 	}
 
-	// 创建或更新统一身份绑定记录
+	// Create or update unified identity binding record
 	_, err = AddUserIdentityBindingForUser(user.UniversalId, strings.ToLower(field), value)
 	if err != nil {
 		return false, err

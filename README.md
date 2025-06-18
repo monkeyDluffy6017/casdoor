@@ -56,8 +56,8 @@
   <br>
 </p>
 
-## 新功能
-[统一身份管理](./UNIFIED_IDENTITY_FEATURE.md)
+## New Features
+[Unified Identity Management](./UNIFIED_IDENTITY_FEATURE.md)
 
 ## Online demo
 

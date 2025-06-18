@@ -1,69 +1,69 @@
 #!/bin/bash
 
-echo "🔧 GitHub OAuth 问题诊断脚本"
+echo "🔧 GitHub OAuth Diagnostic Script"
 echo "============================="
 
-# 检查环境变量
-echo "📋 当前环境变量:"
+# Check environment variables
+echo "📋 Current Environment Variables:"
 echo "GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}"
 if [ -n "${GITHUB_CLIENT_SECRET}" ]; then
     SECRET_LEN=${#GITHUB_CLIENT_SECRET}
-    echo "GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:0:4}...${GITHUB_CLIENT_SECRET: -4} (长度: $SECRET_LEN)"
+    echo "GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:0:4}...${GITHUB_CLIENT_SECRET: -4} (Length: $SECRET_LEN)"
 else
-    echo "GITHUB_CLIENT_SECRET: 未设置"
+    echo "GITHUB_CLIENT_SECRET: Not set"
 fi
 echo ""
 
-# 检查网络连接
-echo "🌐 测试网络连接:"
+# Check network connectivity
+echo "🌐 Testing Network Connectivity:"
 if curl -s --max-time 10 https://api.github.com/user > /dev/null; then
-    echo "✅ GitHub API 连接正常"
+    echo "✅ GitHub API connection successful"
 else
-    echo "❌ GitHub API 连接失败"
+    echo "❌ GitHub API connection failed"
 fi
 
 if curl -s --max-time 10 https://github.com > /dev/null; then
-    echo "✅ GitHub 主站连接正常"
+    echo "✅ GitHub main site connection successful"
 else
-    echo "❌ GitHub 主站连接失败"
+    echo "❌ GitHub main site connection failed"
 fi
 echo ""
 
-# 运行Go调试程序
-echo "🐛 运行详细诊断:"
+# Run Go debug program
+echo "🐛 Running Detailed Diagnostics:"
 go run debug_test.go -c 'RunDebugTests()'
 
 echo ""
-echo "🔍 额外检查项目:"
+echo "🔍 Additional Checks:"
 
-# 检查端口占用
-echo "1. 检查端口占用情况:"
+# Check port usage
+echo "1. Checking port usage:"
 if command -v lsof > /dev/null; then
-    echo "   端口8000: $(lsof -ti:8000 | wc -l) 个进程"
-    echo "   端口8080: $(lsof -ti:8080 | wc -l) 个进程"
+    echo "   Port 8000: $(lsof -ti:8000 | wc -l) processes"
+    echo "   Port 8080: $(lsof -ti:8080 | wc -l) processes"
 else
-    echo "   lsof 命令不可用，跳过端口检查"
+    echo "   lsof command not available, skipping port check"
 fi
 
-# 检查系统时间
-echo "2. 系统时间: $(date)"
+# Check system time
+echo "2. System time: $(date)"
 
-# 检查DNS解析
-echo "3. DNS解析测试:"
+# Check DNS resolution
+echo "3. DNS resolution test:"
 if command -v dig > /dev/null; then
     DIG_RESULT=$(dig +short api.github.com)
     if [ -n "$DIG_RESULT" ]; then
-        echo "   ✅ api.github.com 解析正常: $DIG_RESULT"
+        echo "   ✅ api.github.com resolution successful: $DIG_RESULT"
     else
-        echo "   ❌ api.github.com 解析失败"
+        echo "   ❌ api.github.com resolution failed"
     fi
 else
-    echo "   dig 命令不可用，跳过DNS检查"
+    echo "   dig command not available, skipping DNS check"
 fi
 
 echo ""
-echo "📝 解决建议:"
-echo "1. 如果所有检查都通过，问题可能是授权码过期"
-echo "2. 尝试清除浏览器缓存并重新授权"
-echo "3. 确保GitHub OAuth应用状态为激活状态"
-echo "4. 如果网络有问题，检查防火墙和代理设置"
+echo "📝 Solution Suggestions:"
+echo "1. If all checks pass, the issue might be an expired authorization code"
+echo "2. Try clearing browser cache and re-authorize"
+echo "3. Ensure GitHub OAuth application status is active"
+echo "4. If network issues exist, check firewall and proxy settings"

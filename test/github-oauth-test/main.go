@@ -25,7 +25,7 @@ var (
 	}
 )
 
-// GitHubUser 代表从 GitHub API 获取的用户信息
+// GitHubUser represents user information obtained from GitHub API
 type GitHubUser struct {
 	ID        int    `json:"id"`
 	Login     string `json:"login"`
@@ -38,7 +38,7 @@ type GitHubUser struct {
 	Blog      string `json:"blog"`
 }
 
-// GitHubEmail 代表从 GitHub API 获取的邮箱信息
+// GitHubEmail represents email information obtained from GitHub API
 type GitHubEmail struct {
 	Email      string `json:"email"`
 	Primary    bool   `json:"primary"`
@@ -46,7 +46,7 @@ type GitHubEmail struct {
 	Visibility string `json:"visibility"`
 }
 
-// CallbackResponse 回调响应结构
+// CallbackResponse callback response structure
 type CallbackResponse struct {
 	Success     bool        `json:"success"`
 	Message     string      `json:"message"`
@@ -56,15 +56,15 @@ type CallbackResponse struct {
 }
 
 func main() {
-	// 检查是否启用调试模式
+	// Check if debug mode is enabled
 	if len(os.Args) > 1 && os.Args[1] == "--debug" {
 		RunDebugTests()
 		return
 	}
 
-	// 检查环境变量
+	// Check environment variables
 	if githubOauthConfig.ClientID == "" || githubOauthConfig.ClientSecret == "" {
-		log.Fatal("请设置 GITHUB_CLIENT_ID 和 GITHUB_CLIENT_SECRET 环境变量")
+		log.Fatal("Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables")
 	}
 
 	http.HandleFunc("/", handleIndex)
@@ -72,28 +72,28 @@ func main() {
 	http.HandleFunc("/callback", handleGitHubCallback)
 	http.HandleFunc("/health", handleHealth)
 
-	fmt.Println("🚀 GitHub OAuth 回调处理服务启动在 http://localhost:8080")
-	fmt.Println("📝 回调接口: POST/GET http://localhost:8080/auth/github/callback 和 /callback")
-	fmt.Println("🧠 智能重定向URL检测: 自动尝试多个可能的回调URL")
-	fmt.Println("⚙️  环境变量:")
+	fmt.Println("🚀 GitHub OAuth callback handling service started at http://localhost:8080")
+	fmt.Println("📝 Callback endpoints: POST/GET http://localhost:8080/auth/github/callback and /callback")
+	fmt.Println("🧠 Smart redirect URL detection: Automatically tries multiple possible callback URLs")
+	fmt.Println("⚙️  Environment variables:")
 	fmt.Printf("   GITHUB_CLIENT_ID: %s\n", githubOauthConfig.ClientID)
 	fmt.Printf("   GITHUB_CLIENT_SECRET: %s\n", maskSecret(githubOauthConfig.ClientSecret))
 	fmt.Println("")
-	fmt.Println("📋 API 接口说明:")
-	fmt.Println("   GET  /                           - 服务状态页面")
-	fmt.Println("   GET  /health                     - 健康检查")
-	fmt.Println("   POST /callback                   - GitHub OAuth 回调处理（Casdoor风格）")
-	fmt.Println("   GET  /callback                   - GitHub OAuth 回调处理（Casdoor风格）")
-	fmt.Println("   POST /auth/github/callback       - GitHub OAuth 回调处理（测试服务风格）")
-	fmt.Println("   GET  /auth/github/callback       - GitHub OAuth 回调处理（测试服务风格）")
+	fmt.Println("📋 API endpoints:")
+	fmt.Println("   GET  /                           - Service status page")
+	fmt.Println("   GET  /health                     - Health check")
+	fmt.Println("   POST /callback                   - GitHub OAuth callback handler (Casdoor style)")
+	fmt.Println("   GET  /callback                   - GitHub OAuth callback handler (Casdoor style)")
+	fmt.Println("   POST /auth/github/callback       - GitHub OAuth callback handler (test service style)")
+	fmt.Println("   GET  /auth/github/callback       - GitHub OAuth callback handler (test service style)")
 	fmt.Println("")
-	fmt.Println("💡 提示: 请确保GitHub OAuth应用包含以下回调URL:")
+	fmt.Println("💡 Tip: Make sure your GitHub OAuth app includes the following callback URLs:")
 	fmt.Println("   - http://localhost:8000/callback")
 	fmt.Println("   - http://localhost:8080/auth/github/callback")
 	fmt.Println("   - http://127.0.0.1:8000/callback")
 	fmt.Println("   - http://127.0.0.1:8080/auth/github/callback")
 	fmt.Println("")
-	fmt.Println("🐛 调试模式: go run main.go --debug")
+	fmt.Println("🐛 Debug mode: go run main.go --debug")
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -110,7 +110,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>GitHub OAuth 回调服务</title>
+    <title>GitHub OAuth Callback Service</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -160,34 +160,34 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 </head>
 <body>
     <div class="container">
-        <h1>🔗 GitHub OAuth 回调处理服务</h1>
-        <p>这是一个专门处理 GitHub OAuth 2.0 授权回调的服务。</p>
+        <h1>🔗 GitHub OAuth Callback Handling Service</h1>
+        <p>This is a service specifically designed to handle GitHub OAuth 2.0 authorization callbacks.</p>
 
-        <h2>📋 API 接口</h2>
+        <h2>📋 API Endpoints</h2>
 
         <div class="endpoint">
             <span class="method get">GET</span>
             <code>/health</code>
-            <p>健康检查接口，返回服务状态。</p>
+            <p>Health check endpoint that returns service status.</p>
         </div>
 
         <div class="endpoint">
             <span class="method get">GET</span>
             <span class="method post">POST</span>
             <code>/auth/github/callback</code>
-            <p>GitHub OAuth 回调处理接口。</p>
-            <strong>参数：</strong>
+            <p>GitHub OAuth callback handling endpoint.</p>
+            <strong>Parameters:</strong>
             <ul>
-                <li><code>code</code> - GitHub 授权码</li>
-                <li><code>state</code> - 状态参数（可选）</li>
+                <li><code>code</code> - GitHub authorization code</li>
+                <li><code>state</code> - State parameter (optional)</li>
             </ul>
         </div>
 
-        <h2>📝 响应格式</h2>
-        <p>成功响应示例：</p>
+        <h2>📝 Response Format</h2>
+        <p>Success response example:</p>
         <pre>{
   "success": true,
-  "message": "GitHub OAuth 处理成功",
+  "message": "GitHub OAuth processing successful",
   "user": {
     "id": 12345,
     "login": "username",
@@ -202,15 +202,15 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
   "access_token": "gho_xxxxxxxxxxxx"
 }</pre>
 
-        <p>错误响应示例：</p>
+        <p>Error response example:</p>
         <pre>{
   "success": false,
-  "message": "处理失败",
-  "error": "错误详情"
+  "message": "Processing failed",
+  "error": "Error details"
 }</pre>
 
-        <h2>🔧 测试方法</h2>
-        <p>您可以使用 curl 测试回调接口：</p>
+        <h2>🔧 Testing Method</h2>
+        <p>You can test the callback endpoint using curl:</p>
         <pre>curl -X POST "http://localhost:8080/auth/github/callback" \
      -d "code=YOUR_GITHUB_AUTH_CODE"</pre>
     </div>
@@ -238,7 +238,7 @@ func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "POST" {
 		if err := r.ParseForm(); err != nil {
-			sendErrorResponse(w, "解析表单数据失败", err.Error())
+			sendErrorResponse(w, "Failed to parse form data", err.Error())
 			return
 		}
 		code = r.FormValue("code")
@@ -248,27 +248,27 @@ func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		state = r.URL.Query().Get("state")
 	}
 
-	log.Printf("📨 收到 GitHub 回调请求: method=%s, code=%s, state=%s", r.Method, maskCode(code), state)
+	log.Printf("📨 Received GitHub callback request: method=%s, code=%s, state=%s", r.Method, maskCode(code), state)
 
-	// 检查授权码
+	// Check authorization code
 	if code == "" {
-		log.Printf("❌ 未收到授权码")
-		sendErrorResponse(w, "未收到授权码", "缺少 code 参数")
+		log.Printf("❌ No authorization code received")
+		sendErrorResponse(w, "No authorization code received", "Missing code parameter")
 		return
 	}
 
-	log.Printf("✅ 收到授权码: %s", maskCode(code))
+	log.Printf("✅ Authorization code received: %s", maskCode(code))
 
-	// 智能检测正确的重定向URL
-	// 尝试多个可能的重定向URL，直到找到有效的一个
+	// Smart detection of correct redirect URL
+	// Try multiple possible redirect URLs until finding a valid one
 	possibleRedirectURLs := []string{
-		"http://localhost:8000/callback",             // Casdoor默认
-		"http://localhost:8080/auth/github/callback", // 测试服务默认
-		"http://127.0.0.1:8000/callback",             // Casdoor localhost变种
-		"http://127.0.0.1:8080/auth/github/callback", // 测试服务localhost变种
+		"http://localhost:8000/callback",             // Casdoor default
+		"http://localhost:8080/auth/github/callback", // Test service default
+		"http://127.0.0.1:8000/callback",             // Casdoor localhost variant
+		"http://127.0.0.1:8080/auth/github/callback", // Test service localhost variant
 	}
 
-	// 如果有环境变量指定，优先使用
+	// If there's an environment variable specified, use it first
 	if customURL := os.Getenv("GITHUB_REDIRECT_URL"); customURL != "" {
 		possibleRedirectURLs = append([]string{customURL}, possibleRedirectURLs...)
 	}
@@ -278,7 +278,7 @@ func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 	var successRedirectURL string
 
 	for _, redirectURL := range possibleRedirectURLs {
-		log.Printf("🔍 尝试重定向URL: %s", redirectURL)
+		log.Printf("🔍 Trying redirect URL: %s", redirectURL)
 
 		config := *githubOauthConfig
 		config.RedirectURL = redirectURL
@@ -286,35 +286,35 @@ func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		token, err = config.Exchange(context.Background(), code)
 		if err == nil {
 			successRedirectURL = redirectURL
-			log.Printf("✅ 成功使用重定向URL: %s", redirectURL)
+			log.Printf("✅ Successfully used redirect URL: %s", redirectURL)
 			break
 		} else {
-			log.Printf("❌ 重定向URL失败 %s: %v", redirectURL, err)
+			log.Printf("❌ Redirect URL failed %s: %v", redirectURL, err)
 		}
 	}
 
 	if err != nil {
-		log.Printf("❌ 所有重定向URL都失败了，最后一个错误: %v", err)
-		sendErrorResponse(w, "获取访问令牌失败", fmt.Sprintf("尝试了所有可能的重定向URL都失败了。最后错误: %v", err))
+		log.Printf("❌ All redirect URLs failed, last error: %v", err)
+		sendErrorResponse(w, "Failed to get access token", fmt.Sprintf("All possible redirect URLs failed. Last error: %v", err))
 		return
 	}
 
-	log.Printf("✅ 获取访问令牌成功: %s (使用重定向URL: %s)", maskToken(token.AccessToken), successRedirectURL)
+	log.Printf("✅ Access token obtained successfully: %s (using redirect URL: %s)", maskToken(token.AccessToken), successRedirectURL)
 
-	// 使用访问令牌获取用户信息
+	// Use access token to get user information
 	userInfo, err := getUserInfo(token.AccessToken)
 	if err != nil {
-		log.Printf("❌ 获取用户信息失败: %v", err)
-		sendErrorResponse(w, "获取用户信息失败", err.Error())
+		log.Printf("❌ Failed to get user information: %v", err)
+		sendErrorResponse(w, "Failed to get user information", err.Error())
 		return
 	}
 
-	log.Printf("✅ 获取用户信息成功: %s (%s)", userInfo.Login, userInfo.Email)
+	log.Printf("✅ User information retrieved successfully: %s (%s)", userInfo.Login, userInfo.Email)
 
-	// 返回成功响应
+	// Return success response
 	response := CallbackResponse{
 		Success:     true,
-		Message:     "GitHub OAuth 处理成功",
+		Message:     "GitHub OAuth processing successful",
 		User:        userInfo,
 		AccessToken: token.AccessToken,
 	}
@@ -350,10 +350,10 @@ func maskToken(token string) string {
 }
 
 func getUserInfo(accessToken string) (*GitHubUser, error) {
-	// 创建 HTTP 客户端
+	// Create HTTP client
 	client := &http.Client{Timeout: 10 * time.Second}
 
-	// 获取用户基本信息
+	// Get user basic information
 	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
 	if err != nil {
 		return nil, err
@@ -369,7 +369,7 @@ func getUserInfo(accessToken string) (*GitHubUser, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("GitHub API 错误 (状态码 %d): %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("GitHub API error (status code %d): %s", resp.StatusCode, string(body))
 	}
 
 	var user GitHubUser
@@ -377,11 +377,11 @@ func getUserInfo(accessToken string) (*GitHubUser, error) {
 		return nil, err
 	}
 
-	// 如果用户的公开邮箱为空，尝试获取私有邮箱
+	// If user's public email is empty, try to get private email
 	if user.Email == "" {
 		email, err := getUserEmail(client, accessToken)
 		if err != nil {
-			log.Printf("⚠️ 获取用户邮箱失败: %v", err)
+			log.Printf("⚠️ Failed to get user email: %v", err)
 		} else {
 			user.Email = email
 		}
@@ -406,7 +406,7 @@ func getUserEmail(client *http.Client, accessToken string) (string, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("GitHub API 错误 (状态码 %d): %s", resp.StatusCode, string(body))
+		return "", fmt.Errorf("GitHub API error (status code %d): %s", resp.StatusCode, string(body))
 	}
 
 	var emails []GitHubEmail
@@ -414,7 +414,7 @@ func getUserEmail(client *http.Client, accessToken string) (string, error) {
 		return "", err
 	}
 
-	// 优先返回主邮箱，其次返回已验证的邮箱
+	// Prioritize primary email, then return verified email
 	for _, email := range emails {
 		if email.Primary && email.Verified {
 			return email.Email, nil
@@ -427,44 +427,44 @@ func getUserEmail(client *http.Client, accessToken string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("未找到已验证的邮箱")
+	return "", fmt.Errorf("no verified email found")
 }
 
-// DebugConfig 调试配置信息
+// DebugConfig debug configuration information
 func DebugConfig() {
-	fmt.Println("🔧 === GitHub OAuth 调试信息 ===")
+	fmt.Println("🔧 === GitHub OAuth Debug Information ===")
 	fmt.Printf("GITHUB_CLIENT_ID: %s\n", os.Getenv("GITHUB_CLIENT_ID"))
 	clientSecret := os.Getenv("GITHUB_CLIENT_SECRET")
 	if len(clientSecret) > 8 {
-		fmt.Printf("GITHUB_CLIENT_SECRET: %s...%s (长度: %d)\n",
+		fmt.Printf("GITHUB_CLIENT_SECRET: %s...%s (length: %d)\n",
 			clientSecret[:4], clientSecret[len(clientSecret)-4:], len(clientSecret))
 	} else {
-		fmt.Printf("GITHUB_CLIENT_SECRET: %s (长度: %d)\n", clientSecret, len(clientSecret))
+		fmt.Printf("GITHUB_CLIENT_SECRET: %s (length: %d)\n", clientSecret, len(clientSecret))
 	}
 	fmt.Println()
 }
 
-// TestGitHubAPI 测试GitHub API连接
+// TestGitHubAPI test GitHub API connection
 func TestGitHubAPI() error {
-	fmt.Println("🌐 测试GitHub API连接...")
+	fmt.Println("🌐 Testing GitHub API connection...")
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Get("https://api.github.com/user")
 	if err != nil {
-		return fmt.Errorf("无法连接到GitHub API: %v", err)
+		return fmt.Errorf("unable to connect to GitHub API: %v", err)
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("✅ GitHub API响应状态: %d\n", resp.StatusCode)
+	fmt.Printf("✅ GitHub API response status: %d\n", resp.StatusCode)
 	if resp.StatusCode == 401 {
-		fmt.Println("✅ GitHub API连接正常（未授权响应符合预期）")
+		fmt.Println("✅ GitHub API connection normal (unauthorized response as expected)")
 	}
 	return nil
 }
 
-// TestTokenExchange 测试令牌交换（使用无效code）
+// TestTokenExchange test token exchange (using invalid code)
 func TestTokenExchange() {
-	fmt.Println("🔑 测试OAuth配置...")
+	fmt.Println("🔑 Testing OAuth configuration...")
 
 	config := &oauth2.Config{
 		ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
@@ -474,7 +474,7 @@ func TestTokenExchange() {
 		RedirectURL:  "http://localhost:8000/callback",
 	}
 
-	// 使用一个明显无效的code来测试配置
+	// Use an obviously invalid code to test configuration
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -482,83 +482,83 @@ func TestTokenExchange() {
 	_, err := config.Exchange(ctx, "invalid_test_code_12345")
 	duration := time.Since(start)
 
-	fmt.Printf("⏱️  令牌交换耗时: %v\n", duration)
+	fmt.Printf("⏱️  Token exchange time: %v\n", duration)
 
 	if err != nil {
-		// 分析错误类型
+		// Analyze error type
 		if duration > 5*time.Second {
-			fmt.Printf("⚠️  响应过慢 (>5s)，可能存在网络问题\n")
+			fmt.Printf("⚠️  Response too slow (>5s), possible network issues\n")
 		}
 
 		errStr := err.Error()
 		if strings.Contains(errStr, "invalid_grant") || strings.Contains(errStr, "bad_verification_code") {
-			fmt.Println("✅ OAuth配置正确（收到预期的无效授权码错误）")
+			fmt.Println("✅ OAuth configuration correct (received expected invalid authorization code error)")
 		} else if strings.Contains(errStr, "invalid_client") {
-			fmt.Println("❌ Client ID或Secret错误")
+			fmt.Println("❌ Client ID or Secret error")
 		} else if strings.Contains(errStr, "timeout") || strings.Contains(errStr, "context deadline exceeded") {
-			fmt.Println("❌ 网络超时，检查网络连接")
+			fmt.Println("❌ Network timeout, check network connection")
 		} else {
-			fmt.Printf("❓ 未知错误: %v\n", err)
+			fmt.Printf("❓ Unknown error: %v\n", err)
 		}
 	}
 }
 
-// ValidateEnvironment 验证环境变量
+// ValidateEnvironment validate environment variables
 func ValidateEnvironment() bool {
-	fmt.Println("🔍 验证环境变量...")
+	fmt.Println("🔍 Validating environment variables...")
 
 	clientID := os.Getenv("GITHUB_CLIENT_ID")
 	clientSecret := os.Getenv("GITHUB_CLIENT_SECRET")
 
 	if clientID == "" {
-		fmt.Println("❌ GITHUB_CLIENT_ID 未设置")
+		fmt.Println("❌ GITHUB_CLIENT_ID not set")
 		return false
 	}
 
 	if clientSecret == "" {
-		fmt.Println("❌ GITHUB_CLIENT_SECRET 未设置")
+		fmt.Println("❌ GITHUB_CLIENT_SECRET not set")
 		return false
 	}
 
-	// 验证Client ID格式（GitHub的Client ID通常以Iv开头）
+	// Validate Client ID format (GitHub Client IDs usually start with Iv)
 	if len(clientID) < 16 || !strings.Contains(clientID, "Iv") {
-		fmt.Printf("⚠️  Client ID格式可能不正确: %s\n", clientID)
+		fmt.Printf("⚠️  Client ID format may be incorrect: %s\n", clientID)
 	} else {
-		fmt.Println("✅ Client ID格式正确")
+		fmt.Println("✅ Client ID format correct")
 	}
 
-	// 验证Client Secret长度
+	// Validate Client Secret length
 	if len(clientSecret) != 40 {
-		fmt.Printf("⚠️  Client Secret长度异常: %d (期望40)\n", len(clientSecret))
+		fmt.Printf("⚠️  Client Secret length abnormal: %d (expected 40)\n", len(clientSecret))
 	} else {
-		fmt.Println("✅ Client Secret长度正确")
+		fmt.Println("✅ Client Secret length correct")
 	}
 
 	return true
 }
 
-// RunDebugTests 运行所有调试测试
+// RunDebugTests run all debug tests
 func RunDebugTests() {
-	fmt.Println("🐛 === GitHub OAuth 问题诊断 ===\n")
+	fmt.Println("🐛 === GitHub OAuth Problem Diagnosis ===\n")
 
 	DebugConfig()
 
 	if !ValidateEnvironment() {
-		fmt.Println("❌ 环境变量验证失败，请检查配置")
+		fmt.Println("❌ Environment variable validation failed, please check configuration")
 		return
 	}
 
 	fmt.Println()
 	if err := TestGitHubAPI(); err != nil {
-		fmt.Printf("❌ GitHub API测试失败: %v\n", err)
+		fmt.Printf("❌ GitHub API test failed: %v\n", err)
 	}
 
 	fmt.Println()
 	TestTokenExchange()
 
-	fmt.Println("\n💡 建议:")
-	fmt.Println("1. 如果OAuth配置正确但仍然失败，请获取新的授权码")
-	fmt.Println("2. 确保授权码获取后立即使用（10分钟内）")
-	fmt.Println("3. 检查网络连接和防火墙设置")
-	fmt.Println("4. 确认GitHub OAuth应用状态正常")
+	fmt.Println("\n💡 Suggestions:")
+	fmt.Println("1. If OAuth configuration is correct but still fails, please get a new authorization code")
+	fmt.Println("2. Ensure authorization code is used immediately after obtaining (within 10 minutes)")
+	fmt.Println("3. Check network connection and firewall settings")
+	fmt.Println("4. Confirm GitHub OAuth application status is normal")
 }
