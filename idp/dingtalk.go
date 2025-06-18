@@ -261,7 +261,7 @@ func (idp *DingTalkIdProvider) getUserId(unionId string, accessToken string) (st
 		return "", err
 	}
 	if data.ErrCode == 60121 {
-		return "", fmt.Errorf("this application only allows internal enterprise users to log in, you do not belong to this enterprise and cannot log in")
+		return "", fmt.Errorf("该应用只允许本企业内部用户登录，您不属于该企业，无法登录")
 	} else if data.ErrCode != 0 {
 		return "", fmt.Errorf(data.ErrMessage)
 	}

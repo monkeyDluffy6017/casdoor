@@ -901,6 +901,7 @@ func AddUser(user *User, lang string, primaryProvider string) (bool, error) {
 	updated, err := user.refreshAvatar()
 	if err != nil {
 		return false, err
+
 	}
 
 	if updated && user.PermanentAvatar != "*" {
