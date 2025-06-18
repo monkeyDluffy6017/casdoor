@@ -7,6 +7,12 @@ RUN yarn install --frozen-lockfile --network-timeout 1000000 && NODE_OPTIONS="--
 FROM --platform=$BUILDPLATFORM golang:1.21.13 AS BACK
 WORKDIR /go/src/casdoor
 COPY . .
+
+# --- 增加 Go 代理配置 ---
+ENV GOPROXY="https://goproxy.cn,direct"
+ENV GOSUMDB="sum.golang.google.cn"
+# -------------------------
+
 RUN ./build.sh
 RUN go test -v -run TestGetVersionInfo ./util/system_test.go ./util/system.go > version_info.txt
 

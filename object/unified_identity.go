@@ -129,11 +129,20 @@ func getUserAuthInfo(universalId string) (phoneNumber string, githubAccount stri
 
 // 创建用户时的身份绑定
 func createIdentityBindings(session *xorm.Session, user *User, universalId string, primaryProvider string) error {
+	return createIdentityBindingsWithValue(session, user, universalId, primaryProvider, "")
+}
+
+// 创建用户时的身份绑定（允许指定认证值）
+func createIdentityBindingsWithValue(session *xorm.Session, user *User, universalId string, primaryProvider string, providerValue string) error {
 	if primaryProvider == "" {
 		return fmt.Errorf("primaryProvider is required")
 	}
 
-	providerValue := getProviderValue(user, primaryProvider)
+	// 如果没有提供认证值，则尝试从用户对象获取
+	if providerValue == "" {
+		providerValue = getProviderValue(user, primaryProvider)
+	}
+
 	if providerValue == "" {
 		return fmt.Errorf("cannot get value for provider type: %s", primaryProvider)
 	}
@@ -168,6 +177,10 @@ func getProviderValue(user *User, providerType string) string {
 		if user.Properties != nil {
 			if githubId := user.Properties["oauth_GitHub_id"]; githubId != "" {
 				return githubId
+			}
+			// 尝试从其他GitHub相关属性获取标识符
+			if githubUsername := user.Properties["oauth_GitHub_username"]; githubUsername != "" {
+				return githubUsername
 			}
 		}
 		return ""
@@ -219,12 +232,12 @@ func MergeUsers(reservedUserToken, deletedUserToken string) (*MergeResult, error
 	}
 
 	// 2. 获取用户信息
-	reservedUser, err := getUserByUniversalId(reservedClaims.User.UniversalId)
+	reservedUser, err := getUserByUniversalId(reservedClaims.UniversalId)
 	if err != nil {
 		return nil, err
 	}
 
-	deletedUser, err := getUserByUniversalId(deletedClaims.User.UniversalId)
+	deletedUser, err := getUserByUniversalId(deletedClaims.UniversalId)
 	if err != nil {
 		return nil, err
 	}
@@ -288,14 +301,70 @@ func MergeUsers(reservedUserToken, deletedUserToken string) (*MergeResult, error
 		return nil, err
 	}
 
-	// 8. 删除被删除用户记录
+	// 8. 清理被删除用户的相关状态
+	// 8.1 删除被删除用户的所有 token
+	_, err = session.Where("user = ?", deletedUser.Name).Delete(&Token{})
+	if err != nil {
+		session.Rollback()
+		return nil, err
+	}
+
+	// 8.2 删除被删除用户的所有 session
+	deletedUserId := deletedUser.GetId()
+	_, err = session.Where("owner = ? AND name = ?", deletedUser.Owner, deletedUser.Name).Delete(&Session{})
+	if err != nil {
+		session.Rollback()
+		return nil, err
+	}
+
+	// 8.3 删除被删除用户的验证记录
+	_, err = session.Where("user = ?", deletedUserId).Delete(&VerificationRecord{})
+	if err != nil {
+		session.Rollback()
+		return nil, err
+	}
+
+	// 8.4 删除被删除用户的资源记录
+	_, err = session.Where("user = ?", deletedUser.Name).Delete(&Resource{})
+	if err != nil {
+		session.Rollback()
+		return nil, err
+	}
+
+	// 8.5 删除被删除用户的支付记录
+	_, err = session.Where("user = ?", deletedUser.Name).Delete(&Payment{})
+	if err != nil {
+		session.Rollback()
+		return nil, err
+	}
+
+	// 8.6 删除被删除用户的交易记录
+	_, err = session.Where("user = ?", deletedUser.Name).Delete(&Transaction{})
+	if err != nil {
+		session.Rollback()
+		return nil, err
+	}
+
+	// 8.7 删除被删除用户的订阅记录
+	_, err = session.Where("user = ?", deletedUser.Name).Delete(&Subscription{})
+	if err != nil {
+		session.Rollback()
+		return nil, err
+	}
+
+	// 8.8 清理被删除用户的操作记录（根据业务需求，可能需要保留用于审计）
+	// 注意：Record 使用的是 casvisorsdk.Record 结构，需要特殊处理
+	// 这里我们选择保留记录用于审计追踪，但可以将 User 字段清空或标记为已删除
+	// _, err = session.Where("user = ?", deletedUserId).Delete(&casvisorsdk.Record{})
+
+	// 9. 删除被删除用户记录
 	_, err = session.Delete(deletedUser)
 	if err != nil {
 		session.Rollback()
 		return nil, err
 	}
 
-	// 9. 提交事务
+	// 10. 提交事务
 	if err := session.Commit(); err != nil {
 		return nil, err
 	}

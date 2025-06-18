@@ -32,12 +32,35 @@ import (
 // @Failure 401 Unauthorized
 // @router /identity/merge [post]
 func (c *ApiController) MergeUsers() {
+	// 从 Authorization 头获取 Bearer token
+	authHeader := c.Ctx.Request.Header.Get("Authorization")
+	if authHeader == "" {
+		c.ResponseError("Authorization header required")
+		return
+	}
+
+	// 解析 Bearer token
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		c.ResponseError("Invalid authorization header format. Expected: Bearer <token>")
+		return
+	}
+
+	token := parts[1]
+
+	// 解析token获取用户信息
+	claims, err := object.ParseJwtTokenByApplication(token, nil)
+	if err != nil {
+		c.ResponseError("Invalid token")
+		return
+	}
+
 	var request struct {
 		ReservedUserToken string `json:"reserved_user_token"`
 		DeletedUserToken  string `json:"deleted_user_token"`
 	}
 
-	err := json.Unmarshal(c.Ctx.Input.RequestBody, &request)
+	err = json.Unmarshal(c.Ctx.Input.RequestBody, &request)
 	if err != nil {
 		c.ResponseError("Invalid request body")
 		return
@@ -45,6 +68,27 @@ func (c *ApiController) MergeUsers() {
 
 	if request.ReservedUserToken == "" || request.DeletedUserToken == "" {
 		c.ResponseError("Both reserved_user_token and deleted_user_token are required")
+		return
+	}
+
+	// 验证当前用户有权限进行合并操作
+	// 1. 检查当前用户是否是其中一个token对应的用户
+	reservedClaims, err := object.ParseJwtTokenByApplication(request.ReservedUserToken, nil)
+	if err != nil {
+		c.ResponseError("Invalid reserved_user_token")
+		return
+	}
+
+	deletedClaims, err := object.ParseJwtTokenByApplication(request.DeletedUserToken, nil)
+	if err != nil {
+		c.ResponseError("Invalid deleted_user_token")
+		return
+	}
+
+	// 当前用户必须是要保留的用户或者要删除的用户之一
+	currentUserId := claims.User.Name
+	if currentUserId != reservedClaims.User.Name && currentUserId != deletedClaims.User.Name {
+		c.ResponseError("Unauthorized: You can only merge accounts you own")
 		return
 	}
 
@@ -96,13 +140,13 @@ func (c *ApiController) GetIdentityInfo() {
 		return
 	}
 
-	if claims.User.UniversalId == "" {
+	if claims.UniversalId == "" {
 		c.ResponseError("User does not have a unified identity")
 		return
 	}
 
 	// 获取用户的所有身份绑定
-	bindings, err := object.GetUserIdentityBindingsByUniversalId(claims.User.UniversalId)
+	bindings, err := object.GetUserIdentityBindingsByUniversalId(claims.UniversalId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -117,7 +161,7 @@ func (c *ApiController) GetIdentityInfo() {
 	}
 
 	c.Data["json"] = map[string]interface{}{
-		"universal_id":       claims.User.UniversalId,
+		"universal_id":       claims.UniversalId,
 		"bound_auth_methods": authMethods,
 	}
 	c.ServeJSON()
@@ -157,7 +201,7 @@ func (c *ApiController) BindAuthMethod() {
 		return
 	}
 
-	if claims.User.UniversalId == "" {
+	if claims.UniversalId == "" {
 		c.ResponseError("User does not have a unified identity")
 		return
 	}
@@ -179,7 +223,7 @@ func (c *ApiController) BindAuthMethod() {
 	}
 
 	// 绑定新的认证方式
-	binding, err := object.AddUserIdentityBindingForUser(claims.User.UniversalId, request.AuthType, request.AuthValue)
+	binding, err := object.AddUserIdentityBindingForUser(claims.UniversalId, request.AuthType, request.AuthValue)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -229,7 +273,7 @@ func (c *ApiController) UnbindAuthMethod() {
 		return
 	}
 
-	if claims.User.UniversalId == "" {
+	if claims.UniversalId == "" {
 		c.ResponseError("User does not have a unified identity")
 		return
 	}
@@ -250,7 +294,7 @@ func (c *ApiController) UnbindAuthMethod() {
 	}
 
 	// 解绑认证方式
-	err = object.RemoveUserIdentityBindingForUser(claims.User.UniversalId, request.AuthType)
+	err = object.RemoveUserIdentityBindingForUser(claims.UniversalId, request.AuthType)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return

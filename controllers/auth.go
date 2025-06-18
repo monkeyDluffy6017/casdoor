@@ -743,7 +743,7 @@ func (c *ApiController) Login() {
 					return
 				}
 			} else if provider.Category == "OAuth" || provider.Category == "Web3" {
-				user, err = object.GetUserByField(application.Organization, provider.Type, userInfo.Id)
+				user, err = object.GetUserByFieldWithUnifiedIdentity(application.Organization, provider.Type, userInfo.Id)
 				if err != nil {
 					c.ResponseError(err.Error())
 					return
@@ -770,8 +770,8 @@ func (c *ApiController) Login() {
 				// Sign up via OAuth
 				if application.EnableLinkWithEmail {
 					if userInfo.Email != "" {
-						// Find existing user with Email
-						user, err = object.GetUserByField(application.Organization, "email", userInfo.Email)
+						// Find existing user with Email using unified identity binding
+						user, err = object.GetUserByFieldWithUnifiedIdentity(application.Organization, "email", userInfo.Email)
 						if err != nil {
 							c.ResponseError(err.Error())
 							return
@@ -779,8 +779,8 @@ func (c *ApiController) Login() {
 					}
 
 					if user == nil && userInfo.Phone != "" {
-						// Find existing user with phone number
-						user, err = object.GetUserByField(application.Organization, "phone", userInfo.Phone)
+						// Find existing user with phone number using unified identity binding
+						user, err = object.GetUserByFieldWithUnifiedIdentity(application.Organization, "phone", userInfo.Phone)
 						if err != nil {
 							c.ResponseError(err.Error())
 							return
@@ -867,6 +867,16 @@ func (c *ApiController) Login() {
 					}
 
 					var affected bool
+					// 为了解决GitHub API权限不足时无法创建身份绑定的问题
+					// 先设置OAuth属性，然后再创建用户
+					if userInfo.Id != "" {
+						// 预先设置OAuth ID到Properties中
+						if user.Properties == nil {
+							user.Properties = make(map[string]string)
+						}
+						user.Properties[fmt.Sprintf("oauth_%s_id", provider.Type)] = userInfo.Id
+					}
+
 					affected, err = object.AddUser(user, c.GetAcceptLanguage(), provider.Type)
 					if err != nil {
 						c.ResponseError(err.Error())
@@ -918,7 +928,7 @@ func (c *ApiController) Login() {
 			}
 
 			var oldUser *object.User
-			oldUser, err = object.GetUserByField(application.Organization, provider.Type, userInfo.Id)
+			oldUser, err = object.GetUserByFieldWithUnifiedIdentity(application.Organization, provider.Type, userInfo.Id)
 			if err != nil {
 				c.ResponseError(err.Error())
 				return
