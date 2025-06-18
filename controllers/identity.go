@@ -122,3 +122,143 @@ func (c *ApiController) GetIdentityInfo() {
 	}
 	c.ServeJSON()
 }
+
+// BindAuthMethod
+// @Title BindAuthMethod
+// @Tag Identity API
+// @Description bind a new authentication method to user's unified identity
+// @Param auth_type body string true "authentication type (email, phone, github, etc.)"
+// @Param auth_value body string true "authentication value"
+// @Success 200 {object} object The Response object
+// @Failure 400 Bad request
+// @Failure 401 Unauthorized
+// @router /identity/bind [post]
+func (c *ApiController) BindAuthMethod() {
+	// 从 Authorization 头获取 Bearer token
+	authHeader := c.Ctx.Request.Header.Get("Authorization")
+	if authHeader == "" {
+		c.ResponseError("Authorization header required")
+		return
+	}
+
+	// 解析 Bearer token
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		c.ResponseError("Invalid authorization header format. Expected: Bearer <token>")
+		return
+	}
+
+	token := parts[1]
+
+	// 解析token获取用户信息
+	claims, err := object.ParseJwtTokenByApplication(token, nil)
+	if err != nil {
+		c.ResponseError("Invalid token")
+		return
+	}
+
+	if claims.User.UniversalId == "" {
+		c.ResponseError("User does not have a unified identity")
+		return
+	}
+
+	var request struct {
+		AuthType  string `json:"auth_type"`
+		AuthValue string `json:"auth_value"`
+	}
+
+	err = json.Unmarshal(c.Ctx.Input.RequestBody, &request)
+	if err != nil {
+		c.ResponseError("Invalid request body")
+		return
+	}
+
+	if request.AuthType == "" || request.AuthValue == "" {
+		c.ResponseError("auth_type and auth_value are required")
+		return
+	}
+
+	// 绑定新的认证方式
+	binding, err := object.AddUserIdentityBindingForUser(claims.User.UniversalId, request.AuthType, request.AuthValue)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	c.Data["json"] = map[string]interface{}{
+		"status":  "ok",
+		"message": "Authentication method bound successfully",
+		"binding": map[string]string{
+			"auth_type":  binding.AuthType,
+			"auth_value": binding.AuthValue,
+		},
+	}
+	c.ServeJSON()
+}
+
+// UnbindAuthMethod
+// @Title UnbindAuthMethod
+// @Tag Identity API
+// @Description unbind an authentication method from user's unified identity
+// @Param auth_type body string true "authentication type to unbind"
+// @Success 200 {object} object The Response object
+// @Failure 400 Bad request
+// @Failure 401 Unauthorized
+// @router /identity/unbind [post]
+func (c *ApiController) UnbindAuthMethod() {
+	// 从 Authorization 头获取 Bearer token
+	authHeader := c.Ctx.Request.Header.Get("Authorization")
+	if authHeader == "" {
+		c.ResponseError("Authorization header required")
+		return
+	}
+
+	// 解析 Bearer token
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		c.ResponseError("Invalid authorization header format. Expected: Bearer <token>")
+		return
+	}
+
+	token := parts[1]
+
+	// 解析token获取用户信息
+	claims, err := object.ParseJwtTokenByApplication(token, nil)
+	if err != nil {
+		c.ResponseError("Invalid token")
+		return
+	}
+
+	if claims.User.UniversalId == "" {
+		c.ResponseError("User does not have a unified identity")
+		return
+	}
+
+	var request struct {
+		AuthType string `json:"auth_type"`
+	}
+
+	err = json.Unmarshal(c.Ctx.Input.RequestBody, &request)
+	if err != nil {
+		c.ResponseError("Invalid request body")
+		return
+	}
+
+	if request.AuthType == "" {
+		c.ResponseError("auth_type is required")
+		return
+	}
+
+	// 解绑认证方式
+	err = object.RemoveUserIdentityBindingForUser(claims.User.UniversalId, request.AuthType)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	c.Data["json"] = map[string]interface{}{
+		"status":  "ok",
+		"message": "Authentication method unbound successfully",
+	}
+	c.ServeJSON()
+}

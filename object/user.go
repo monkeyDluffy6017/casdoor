@@ -820,7 +820,11 @@ func UpdateUserForAllFields(id string, user *User) (bool, error) {
 	return affected != 0, nil
 }
 
-func AddUser(user *User, lang string) (bool, error) {
+func AddUser(user *User, lang string, primaryProvider string) (bool, error) {
+	if primaryProvider == "" {
+		return false, fmt.Errorf(i18n.Translate(lang, "user:primary provider is required"))
+	}
+
 	if user.Id == "" {
 		application, err := GetApplicationByUser(user)
 		if err != nil {
@@ -852,6 +856,7 @@ func AddUser(user *User, lang string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	if organization == nil {
 		return false, fmt.Errorf(i18n.Translate(lang, "auth:the organization: %s is not found"), user.Owner)
 	}
@@ -880,6 +885,10 @@ func AddUser(user *User, lang string) (bool, error) {
 
 	if user.CreatedTime == "" {
 		user.CreatedTime = util.GetCurrentTime()
+	}
+
+	if user.UpdatedTime == "" {
+		user.UpdatedTime = util.GetCurrentTime()
 	}
 
 	err = user.UpdateUserHash()
@@ -937,8 +946,8 @@ func AddUser(user *User, lang string) (bool, error) {
 		return false, err
 	}
 
-	// 创建认证方式绑定记录
-	err = createIdentityBindings(session, user, user.UniversalId)
+	// 创建认证方式绑定记录，传递主要登录方式信息
+	err = createIdentityBindings(session, user, user.UniversalId, primaryProvider)
 	if err != nil {
 		session.Rollback()
 		return false, err

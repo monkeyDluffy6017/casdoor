@@ -128,123 +128,81 @@ func getUserAuthInfo(universalId string) (phoneNumber string, githubAccount stri
 }
 
 // 创建用户时的身份绑定
-func createIdentityBindings(session *xorm.Session, user *User, universalId string) error {
-	bindings := []*UserIdentityBinding{}
-
-	// GitHub 认证
-	if user.GitHub != "" {
-		bindings = append(bindings, &UserIdentityBinding{
-			Id:          util.GenerateId(),
-			UniversalId: universalId,
-			AuthType:    "github",
-			AuthValue:   user.GitHub,
-			CreatedTime: util.GetCurrentTime(),
-		})
+func createIdentityBindings(session *xorm.Session, user *User, universalId string, primaryProvider string) error {
+	if primaryProvider == "" {
+		return fmt.Errorf("primaryProvider is required")
 	}
 
-	// 手机号认证
-	if user.Phone != "" {
-		bindings = append(bindings, &UserIdentityBinding{
-			Id:          util.GenerateId(),
-			UniversalId: universalId,
-			AuthType:    "phone",
-			AuthValue:   user.Phone,
-			CreatedTime: util.GetCurrentTime(),
-		})
+	providerValue := getProviderValue(user, primaryProvider)
+	if providerValue == "" {
+		return fmt.Errorf("cannot get value for provider type: %s", primaryProvider)
 	}
 
-	// 邮箱认证
-	if user.Email != "" {
-		bindings = append(bindings, &UserIdentityBinding{
-			Id:          util.GenerateId(),
-			UniversalId: universalId,
-			AuthType:    "email",
-			AuthValue:   user.Email,
-			CreatedTime: util.GetCurrentTime(),
-		})
+	// 创建唯一的身份绑定记录
+	binding := &UserIdentityBinding{
+		Id:          util.GenerateId(),
+		UniversalId: universalId,
+		AuthType:    strings.ToLower(primaryProvider),
+		AuthValue:   providerValue,
+		CreatedTime: util.GetCurrentTime(),
 	}
 
-	// 密码认证（用户名密码注册）
-	if user.Password != "" {
-		bindings = append(bindings, &UserIdentityBinding{
-			Id:          util.GenerateId(),
-			UniversalId: universalId,
-			AuthType:    "password",
-			AuthValue:   fmt.Sprintf("%s/%s", user.Owner, user.Name), // owner/name 作为认证值
-			CreatedTime: util.GetCurrentTime(),
-		})
-	}
-
-	// 其他第三方登录
-	if user.Google != "" {
-		bindings = append(bindings, &UserIdentityBinding{
-			Id:          util.GenerateId(),
-			UniversalId: universalId,
-			AuthType:    "google",
-			AuthValue:   user.Google,
-			CreatedTime: util.GetCurrentTime(),
-		})
-	}
-
-	if user.WeChat != "" {
-		bindings = append(bindings, &UserIdentityBinding{
-			Id:          util.GenerateId(),
-			UniversalId: universalId,
-			AuthType:    "wechat",
-			AuthValue:   user.WeChat,
-			CreatedTime: util.GetCurrentTime(),
-		})
-	}
-
-	if user.QQ != "" {
-		bindings = append(bindings, &UserIdentityBinding{
-			Id:          util.GenerateId(),
-			UniversalId: universalId,
-			AuthType:    "qq",
-			AuthValue:   user.QQ,
-			CreatedTime: util.GetCurrentTime(),
-		})
-	}
-
-	if user.Facebook != "" {
-		bindings = append(bindings, &UserIdentityBinding{
-			Id:          util.GenerateId(),
-			UniversalId: universalId,
-			AuthType:    "facebook",
-			AuthValue:   user.Facebook,
-			CreatedTime: util.GetCurrentTime(),
-		})
-	}
-
-	if user.DingTalk != "" {
-		bindings = append(bindings, &UserIdentityBinding{
-			Id:          util.GenerateId(),
-			UniversalId: universalId,
-			AuthType:    "dingtalk",
-			AuthValue:   user.DingTalk,
-			CreatedTime: util.GetCurrentTime(),
-		})
-	}
-
-	if user.Weibo != "" {
-		bindings = append(bindings, &UserIdentityBinding{
-			Id:          util.GenerateId(),
-			UniversalId: universalId,
-			AuthType:    "weibo",
-			AuthValue:   user.Weibo,
-			CreatedTime: util.GetCurrentTime(),
-		})
-	}
-
-	// 批量插入绑定记录
-	for _, binding := range bindings {
-		_, err := session.Insert(binding)
-		if err != nil {
-			return err
-		}
+	_, err := session.Insert(binding)
+	if err != nil {
+		return err
 	}
 
 	return nil
+}
+
+// 辅助函数：根据provider类型获取对应的值
+func getProviderValue(user *User, providerType string) string {
+	providerTypeLower := strings.ToLower(providerType)
+
+	switch providerTypeLower {
+	case "github":
+		if user.GitHub != "" {
+			return user.GitHub
+		}
+		// 如果用户GitHub字段为空，但有从GitHub OAuth获取的ID信息，从Properties中获取
+		if user.Properties != nil {
+			if githubId := user.Properties["oauth_GitHub_id"]; githubId != "" {
+				return githubId
+			}
+		}
+		return ""
+	case "google":
+		return user.Google
+	case "wechat":
+		return user.WeChat
+	case "qq":
+		return user.QQ
+	case "facebook":
+		return user.Facebook
+	case "dingtalk":
+		return user.DingTalk
+	case "weibo":
+		return user.Weibo
+	case "email":
+		return user.Email
+	case "phone":
+		return user.Phone
+	case "password":
+		if user.Password != "" {
+			return fmt.Sprintf("%s/%s", user.Owner, user.Name)
+		}
+		return ""
+	case "ldap":
+		return user.Ldap
+	default:
+		// 对于其他provider类型，尝试从Properties中获取
+		if user.Properties != nil {
+			if id := user.Properties[fmt.Sprintf("oauth_%s_id", providerType)]; id != "" {
+				return id
+			}
+		}
+		return ""
+	}
 }
 
 // 用户合并函数
@@ -407,4 +365,82 @@ func validateUsernamePassword(userOwnerName, password string) (*User, error) {
 	}
 
 	return user, nil
+}
+
+// 用户主动绑定额外的登录方式
+func AddUserIdentityBindingForUser(universalId string, authType string, authValue string) (*UserIdentityBinding, error) {
+	// 检查是否已经存在相同的绑定
+	existingBinding, err := GetUserIdentityBindingByAuth(authType, authValue)
+	if err != nil {
+		return nil, err
+	}
+
+	if existingBinding != nil {
+		if existingBinding.UniversalId == universalId {
+			// 已经绑定到当前用户，返回现有绑定
+			return existingBinding, nil
+		} else {
+			// 已经绑定到其他用户，不允许重复绑定
+			return nil, fmt.Errorf("此%s已被其他用户绑定", authType)
+		}
+	}
+
+	// 创建新的身份绑定
+	binding := &UserIdentityBinding{
+		Id:          util.GenerateId(),
+		UniversalId: universalId,
+		AuthType:    authType,
+		AuthValue:   authValue,
+		CreatedTime: util.GetCurrentTime(),
+	}
+
+	success, err := AddUserIdentityBinding(binding)
+	if err != nil {
+		return nil, err
+	}
+
+	if !success {
+		return nil, fmt.Errorf("创建身份绑定失败")
+	}
+
+	return binding, nil
+}
+
+// 用户解除身份绑定
+func RemoveUserIdentityBindingForUser(universalId string, authType string) error {
+	// 获取用户的所有身份绑定
+	bindings, err := GetUserIdentityBindingsByUniversalId(universalId)
+	if err != nil {
+		return err
+	}
+
+	// 检查是否只剩一个身份绑定，如果是则不允许删除
+	if len(bindings) <= 1 {
+		return fmt.Errorf("不能删除唯一的登录方式，请先绑定其他登录方式")
+	}
+
+	// 查找要删除的身份绑定
+	var targetBinding *UserIdentityBinding
+	for _, binding := range bindings {
+		if binding.AuthType == authType {
+			targetBinding = binding
+			break
+		}
+	}
+
+	if targetBinding == nil {
+		return fmt.Errorf("未找到要删除的身份绑定")
+	}
+
+	// 删除身份绑定
+	success, err := DeleteUserIdentityBinding(targetBinding.Id)
+	if err != nil {
+		return err
+	}
+
+	if !success {
+		return fmt.Errorf("删除身份绑定失败")
+	}
+
+	return nil
 }
