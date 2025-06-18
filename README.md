@@ -56,6 +56,9 @@
   <br>
 </p>
 
+## 新功能
+[统一身份管理](./UNIFIED_IDENTITY_FEATURE.md)
+
 ## Online demo
 
 - Read-only site: https://door.casdoor.com (any modification operation will fail)
@@ -100,3 +103,5 @@ If you are contributing to casdoor, please note that we use [Crowdin](https://cr
 ## License
 
 [Apache-2.0](https://github.com/casdoor/casdoor/blob/master/LICENSE)
+
+
