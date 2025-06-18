@@ -22,7 +22,7 @@ import (
 	"github.com/xorm-io/xorm"
 )
 
-// 用户身份绑定结构（直接使用 User 表的 UniversalId）
+// User identity binding structure (directly using User table's UniversalId)
 type UserIdentityBinding struct {
 	Id          string `xorm:"varchar(100) pk" json:"id"`
 	UniversalId string `xorm:"varchar(100)" json:"universalId"`
@@ -31,20 +31,20 @@ type UserIdentityBinding struct {
 	CreatedTime string `xorm:"varchar(100)" json:"createdTime"`
 }
 
-// 用户合并结果
+// User merge result
 type MergeResult struct {
 	UniversalId       string       `json:"universal_id"`
 	DeletedUserId     string       `json:"deleted_user_id"`
 	MergedAuthMethods []AuthMethod `json:"merged_auth_methods"`
 }
 
-// 认证方式
+// Authentication method
 type AuthMethod struct {
 	AuthType  string `json:"auth_type"`
 	AuthValue string `json:"auth_value"`
 }
 
-// 用户身份绑定操作
+// User identity binding operations
 func AddUserIdentityBinding(binding *UserIdentityBinding) (bool, error) {
 	affected, err := ormer.Engine.Insert(binding)
 	if err != nil {
@@ -87,14 +87,14 @@ func DeleteUserIdentityBindingsByUniversalId(universalId string) (bool, error) {
 	return affected != 0, nil
 }
 
-// 检查认证方式是否存在
+// Check if authentication method exists
 func checkAuthMethodExists(session *xorm.Session, universalId, authType, authValue string) (bool, error) {
 	count, err := session.Where("universal_id = ? AND auth_type = ? AND auth_value = ?",
 		universalId, authType, authValue).Count(&UserIdentityBinding{})
 	return count > 0, err
 }
 
-// 通过统一身份ID获取用户
+// Get user by universal ID
 func getUserByUniversalId(universalId string) (*User, error) {
 	user := &User{}
 	has, err := ormer.Engine.Where("universal_id = ?", universalId).Get(user)
@@ -107,7 +107,7 @@ func getUserByUniversalId(universalId string) (*User, error) {
 	return user, nil
 }
 
-// 获取用户的认证信息（手机号和GitHub账号）
+// Get user's authentication information (phone number and GitHub account)
 func getUserAuthInfo(universalId string) (phoneNumber string, githubAccount string, err error) {
 	bindings := []*UserIdentityBinding{}
 	err = ormer.Engine.Where("universal_id = ?", universalId).Find(&bindings)
@@ -127,18 +127,18 @@ func getUserAuthInfo(universalId string) (phoneNumber string, githubAccount stri
 	return phoneNumber, githubAccount, nil
 }
 
-// 创建用户时的身份绑定
+// Identity binding when creating a user
 func createIdentityBindings(session *xorm.Session, user *User, universalId string, primaryProvider string) error {
 	return createIdentityBindingsWithValue(session, user, universalId, primaryProvider, "")
 }
 
-// 创建用户时的身份绑定（允许指定认证值）
+// Identity binding when creating a user (allow specifying authentication value)
 func createIdentityBindingsWithValue(session *xorm.Session, user *User, universalId string, primaryProvider string, providerValue string) error {
 	if primaryProvider == "" {
 		return fmt.Errorf("primaryProvider is required")
 	}
 
-	// 如果没有提供认证值，则尝试从用户对象获取
+	// If no authentication value is provided, try to get it from the user object
 	if providerValue == "" {
 		providerValue = getProviderValue(user, primaryProvider)
 	}
@@ -147,7 +147,7 @@ func createIdentityBindingsWithValue(session *xorm.Session, user *User, universa
 		return fmt.Errorf("cannot get value for provider type: %s", primaryProvider)
 	}
 
-	// 创建唯一的身份绑定记录
+	// Create a unique identity binding record
 	binding := &UserIdentityBinding{
 		Id:          util.GenerateId(),
 		UniversalId: universalId,
@@ -164,7 +164,7 @@ func createIdentityBindingsWithValue(session *xorm.Session, user *User, universa
 	return nil
 }
 
-// 辅助函数：根据provider类型获取对应的值
+// Helper function: Get value corresponding to provider type
 func getProviderValue(user *User, providerType string) string {
 	providerTypeLower := strings.ToLower(providerType)
 
@@ -173,12 +173,12 @@ func getProviderValue(user *User, providerType string) string {
 		if user.GitHub != "" {
 			return user.GitHub
 		}
-		// 如果用户GitHub字段为空，但有从GitHub OAuth获取的ID信息，从Properties中获取
+		// If user GitHub field is empty but has ID information from GitHub OAuth, get it from Properties
 		if user.Properties != nil {
 			if githubId := user.Properties["oauth_GitHub_id"]; githubId != "" {
 				return githubId
 			}
-			// 尝试从其他GitHub相关属性获取标识符
+			// Try to get identifier from other GitHub related attributes
 			if githubUsername := user.Properties["oauth_GitHub_username"]; githubUsername != "" {
 				return githubUsername
 			}
@@ -208,11 +208,11 @@ func getProviderValue(user *User, providerType string) string {
 	case "ldap":
 		return user.Ldap
 	case "custom":
-		// 首先检查用户的Custom字段
+		// First check user's Custom field
 		if user.Custom != "" {
 			return user.Custom
 		}
-		// 如果Custom字段为空，从Properties中获取
+		// If Custom field is empty, get it from Properties
 		if user.Properties != nil {
 			if id := user.Properties["oauth_Custom_id"]; id != "" {
 				return id
@@ -220,7 +220,7 @@ func getProviderValue(user *User, providerType string) string {
 		}
 		return ""
 	default:
-		// 对于其他provider类型，尝试从Properties中获取
+		// For other provider types, try to get it from Properties
 		if user.Properties != nil {
 			if id := user.Properties[fmt.Sprintf("oauth_%s_id", providerType)]; id != "" {
 				return id
@@ -230,9 +230,9 @@ func getProviderValue(user *User, providerType string) string {
 	}
 }
 
-// 用户合并函数
+// User merge function
 func MergeUsers(reservedUserToken, deletedUserToken string) (*MergeResult, error) {
-	// 1. 验证两个用户 token
+	// 1. Verify two user tokens
 	reservedClaims, err := ParseJwtTokenByApplication(reservedUserToken, nil)
 	if err != nil {
 		return nil, fmt.Errorf("invalid reserved user token: %v", err)
@@ -243,7 +243,7 @@ func MergeUsers(reservedUserToken, deletedUserToken string) (*MergeResult, error
 		return nil, fmt.Errorf("invalid deleted user token: %v", err)
 	}
 
-	// 2. 获取用户信息
+	// 2. Get user information
 	reservedUser, err := getUserByUniversalId(reservedClaims.UniversalId)
 	if err != nil {
 		return nil, err
@@ -254,18 +254,18 @@ func MergeUsers(reservedUserToken, deletedUserToken string) (*MergeResult, error
 		return nil, err
 	}
 
-	// 3. 验证合并条件
+	// 3. Verify merge conditions
 	if reservedUser.UniversalId == deletedUser.UniversalId {
 		return nil, fmt.Errorf("cannot merge the same user")
 	}
 
-	// 4. 获取要删除用户的所有身份绑定
+	// 4. Get all identity bindings of the user to be deleted
 	deletedBindings, err := GetUserIdentityBindingsByUniversalId(deletedUser.UniversalId)
 	if err != nil {
 		return nil, err
 	}
 
-	// 5. 开始事务处理
+	// 5. Start transaction processing
 	session := ormer.Engine.NewSession()
 	defer session.Close()
 
@@ -275,9 +275,9 @@ func MergeUsers(reservedUserToken, deletedUserToken string) (*MergeResult, error
 
 	mergedAuthMethods := []AuthMethod{}
 
-	// 6. 处理认证方式转移
+	// 6. Handle authentication method transfer
 	for _, binding := range deletedBindings {
-		// 检查保留用户是否已有相同的认证方式
+		// Check if the reserved user already has the same authentication method
 		exists, err := checkAuthMethodExists(session, reservedUser.UniversalId, binding.AuthType, binding.AuthValue)
 		if err != nil {
 			session.Rollback()
@@ -285,7 +285,7 @@ func MergeUsers(reservedUserToken, deletedUserToken string) (*MergeResult, error
 		}
 
 		if !exists {
-			// 创建新的绑定记录
+			// Create new binding record
 			newBinding := &UserIdentityBinding{
 				Id:          util.GenerateId(),
 				UniversalId: reservedUser.UniversalId,
@@ -306,22 +306,22 @@ func MergeUsers(reservedUserToken, deletedUserToken string) (*MergeResult, error
 		}
 	}
 
-	// 7. 删除被删除用户的所有绑定记录
+	// 7. Delete all bindings of the deleted user
 	_, err = session.Where("universal_id = ?", deletedUser.UniversalId).Delete(&UserIdentityBinding{})
 	if err != nil {
 		session.Rollback()
 		return nil, err
 	}
 
-	// 8. 清理被删除用户的相关状态
-	// 8.1 删除被删除用户的所有 token
+	// 8. Clean up related status of the deleted user
+	// 8.1 Delete all tokens of the deleted user
 	_, err = session.Where("user = ?", deletedUser.Name).Delete(&Token{})
 	if err != nil {
 		session.Rollback()
 		return nil, err
 	}
 
-	// 8.2 删除被删除用户的所有 session
+	// 8.2 Delete all sessions of the deleted user
 	deletedUserId := deletedUser.GetId()
 	_, err = session.Where("owner = ? AND name = ?", deletedUser.Owner, deletedUser.Name).Delete(&Session{})
 	if err != nil {
@@ -329,54 +329,54 @@ func MergeUsers(reservedUserToken, deletedUserToken string) (*MergeResult, error
 		return nil, err
 	}
 
-	// 8.3 删除被删除用户的验证记录
+	// 8.3 Delete verification records of the deleted user
 	_, err = session.Where("user = ?", deletedUserId).Delete(&VerificationRecord{})
 	if err != nil {
 		session.Rollback()
 		return nil, err
 	}
 
-	// 8.4 删除被删除用户的资源记录
+	// 8.4 Delete resource records of the deleted user
 	_, err = session.Where("user = ?", deletedUser.Name).Delete(&Resource{})
 	if err != nil {
 		session.Rollback()
 		return nil, err
 	}
 
-	// 8.5 删除被删除用户的支付记录
+	// 8.5 Delete payment records of the deleted user
 	_, err = session.Where("user = ?", deletedUser.Name).Delete(&Payment{})
 	if err != nil {
 		session.Rollback()
 		return nil, err
 	}
 
-	// 8.6 删除被删除用户的交易记录
+	// 8.6 Delete transaction records of the deleted user
 	_, err = session.Where("user = ?", deletedUser.Name).Delete(&Transaction{})
 	if err != nil {
 		session.Rollback()
 		return nil, err
 	}
 
-	// 8.7 删除被删除用户的订阅记录
+	// 8.7 Delete subscription records of the deleted user
 	_, err = session.Where("user = ?", deletedUser.Name).Delete(&Subscription{})
 	if err != nil {
 		session.Rollback()
 		return nil, err
 	}
 
-	// 8.8 清理被删除用户的操作记录（根据业务需求，可能需要保留用于审计）
-	// 注意：Record 使用的是 casvisorsdk.Record 结构，需要特殊处理
-	// 这里我们选择保留记录用于审计追踪，但可以将 User 字段清空或标记为已删除
+	// 8.8 Clean up operation records of the deleted user (according to business needs, it may be necessary to retain for audit)
+	// Note: Record uses casvisorsdk.Record structure, which needs special handling
+	// Here we choose to retain records for audit tracking, but can clear or mark User field as deleted
 	// _, err = session.Where("user = ?", deletedUserId).Delete(&casvisorsdk.Record{})
 
-	// 9. 删除被删除用户记录
+	// 9. Delete deleted user record
 	_, err = session.Delete(deletedUser)
 	if err != nil {
 		session.Rollback()
 		return nil, err
 	}
 
-	// 10. 提交事务
+	// 10. Commit transaction
 	if err := session.Commit(); err != nil {
 		return nil, err
 	}
@@ -388,7 +388,7 @@ func MergeUsers(reservedUserToken, deletedUserToken string) (*MergeResult, error
 	}, nil
 }
 
-// 通过认证方式登录
+// Login with unified identity
 func LoginWithUnifiedIdentity(authType, authValue, password string) (*User, error) {
 	var binding *UserIdentityBinding
 	var err error
@@ -401,7 +401,7 @@ func LoginWithUnifiedIdentity(authType, authValue, password string) (*User, erro
 	case "email":
 		binding, err = GetUserIdentityBindingByAuth("email", authValue)
 	case "password":
-		// 用户名密码登录，需要先验证密码
+		// User name password login, need to verify password first
 		user, err := validateUsernamePassword(authValue, password)
 		if err != nil || user == nil {
 			return nil, err
@@ -419,7 +419,7 @@ func LoginWithUnifiedIdentity(authType, authValue, password string) (*User, erro
 		return nil, fmt.Errorf("authentication failed")
 	}
 
-	// 通过统一身份ID获取用户
+	// Get user by unified identity ID
 	user, err := getUserByUniversalId(binding.UniversalId)
 	if err != nil {
 		return nil, err
@@ -428,9 +428,9 @@ func LoginWithUnifiedIdentity(authType, authValue, password string) (*User, erro
 	return user, nil
 }
 
-// 验证用户名密码
+// Verify username password
 func validateUsernamePassword(userOwnerName, password string) (*User, error) {
-	// 解析 owner/name 格式
+	// Parse owner/name format
 	parts := strings.Split(userOwnerName, "/")
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("invalid username format, expected: owner/name")
@@ -439,7 +439,7 @@ func validateUsernamePassword(userOwnerName, password string) (*User, error) {
 	owner := parts[0]
 	name := parts[1]
 
-	// 使用现有的密码验证逻辑
+	// Use existing password verification logic
 	user, err := CheckUserPassword(owner, name, password, "en")
 	if err != nil {
 		return nil, err
@@ -448,9 +448,9 @@ func validateUsernamePassword(userOwnerName, password string) (*User, error) {
 	return user, nil
 }
 
-// 用户主动绑定额外的登录方式
+// User actively binds additional login methods
 func AddUserIdentityBindingForUser(universalId string, authType string, authValue string) (*UserIdentityBinding, error) {
-	// 检查是否已经存在相同的绑定
+	// Check if it already exists
 	existingBinding, err := GetUserIdentityBindingByAuth(authType, authValue)
 	if err != nil {
 		return nil, err
@@ -458,15 +458,15 @@ func AddUserIdentityBindingForUser(universalId string, authType string, authValu
 
 	if existingBinding != nil {
 		if existingBinding.UniversalId == universalId {
-			// 已经绑定到当前用户，返回现有绑定
+			// Already bound to current user, return existing binding
 			return existingBinding, nil
 		} else {
-			// 已经绑定到其他用户，不允许重复绑定
-			return nil, fmt.Errorf("此%s已被其他用户绑定", authType)
+			// Already bound to other user, not allowed to repeat binding
+			return nil, fmt.Errorf("this %s has been bound to other users", authType)
 		}
 	}
 
-	// 创建新的身份绑定
+	// Create new identity binding
 	binding := &UserIdentityBinding{
 		Id:          util.GenerateId(),
 		UniversalId: universalId,
@@ -481,26 +481,26 @@ func AddUserIdentityBindingForUser(universalId string, authType string, authValu
 	}
 
 	if !success {
-		return nil, fmt.Errorf("创建身份绑定失败")
+		return nil, fmt.Errorf("failed to create identity binding")
 	}
 
 	return binding, nil
 }
 
-// 用户解除身份绑定
+// User removes identity binding
 func RemoveUserIdentityBindingForUser(universalId string, authType string) error {
-	// 获取用户的所有身份绑定
+	// Get all identity bindings of the user
 	bindings, err := GetUserIdentityBindingsByUniversalId(universalId)
 	if err != nil {
 		return err
 	}
 
-	// 检查是否只剩一个身份绑定，如果是则不允许删除
+	// Check if there is only one identity binding, if so, not allowed to delete
 	if len(bindings) <= 1 {
-		return fmt.Errorf("不能删除唯一的登录方式，请先绑定其他登录方式")
+		return fmt.Errorf("cannot delete the only login method, please bind other login methods first")
 	}
 
-	// 查找要删除的身份绑定
+	// Find the identity binding to be deleted
 	var targetBinding *UserIdentityBinding
 	for _, binding := range bindings {
 		if binding.AuthType == authType {
@@ -510,17 +510,17 @@ func RemoveUserIdentityBindingForUser(universalId string, authType string) error
 	}
 
 	if targetBinding == nil {
-		return fmt.Errorf("未找到要删除的身份绑定")
+		return fmt.Errorf("identity binding to be deleted not found")
 	}
 
-	// 删除身份绑定
+	// Delete identity binding
 	success, err := DeleteUserIdentityBinding(targetBinding.Id)
 	if err != nil {
 		return err
 	}
 
 	if !success {
-		return fmt.Errorf("删除身份绑定失败")
+		return fmt.Errorf("failed to delete identity binding")
 	}
 
 	return nil

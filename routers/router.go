@@ -273,7 +273,7 @@ func initAPI() {
 	beego.Router("/api/login/oauth/refresh_token", &controllers.ApiController{}, "POST:RefreshToken")
 	beego.Router("/api/login/oauth/introspect", &controllers.ApiController{}, "POST:IntrospectToken")
 
-	// 统一身份相关的路由
+	// Unified Identity Routes
 	beego.Router("/api/identity/merge", &controllers.ApiController{}, "POST:MergeUsers")
 	beego.Router("/api/identity/info", &controllers.ApiController{}, "GET:GetIdentityInfo")
 

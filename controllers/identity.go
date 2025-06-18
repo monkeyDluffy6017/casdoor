@@ -250,14 +250,14 @@ func (c *ApiController) BindAuthMethod() {
 // @Failure 401 Unauthorized
 // @router /identity/unbind [post]
 func (c *ApiController) UnbindAuthMethod() {
-	// 从 Authorization 头获取 Bearer token
+	// Get Bearer token from Authorization header
 	authHeader := c.Ctx.Request.Header.Get("Authorization")
 	if authHeader == "" {
 		c.ResponseError("Authorization header required")
 		return
 	}
 
-	// 解析 Bearer token
+	// Parse Bearer token
 	parts := strings.Split(authHeader, " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {
 		c.ResponseError("Invalid authorization header format. Expected: Bearer <token>")
@@ -266,7 +266,7 @@ func (c *ApiController) UnbindAuthMethod() {
 
 	token := parts[1]
 
-	// 解析token获取用户信息
+	// Parse token to get user information
 	claims, err := object.ParseJwtTokenByApplication(token, nil)
 	if err != nil {
 		c.ResponseError("Invalid token")
@@ -293,7 +293,7 @@ func (c *ApiController) UnbindAuthMethod() {
 		return
 	}
 
-	// 解绑认证方式
+	// Unbind authentication method
 	err = object.RemoveUserIdentityBindingForUser(claims.UniversalId, request.AuthType)
 	if err != nil {
 		c.ResponseError(err.Error())
