@@ -14,10 +14,6 @@
 
 package object
 
-import (
-	"log"
-)
-
 func (application *Application) GetProviderByCategory(category string) (*Provider, error) {
 	providers, err := GetProviders(application.Organization)
 	if err != nil {
@@ -56,57 +52,34 @@ func isProviderItemCountryCodeMatched(providerItem *ProviderItem, countryCode st
 }
 
 func (application *Application) GetProviderByCategoryAndRule(category string, method string, countryCode string) (*Provider, error) {
-	log.Printf("=== GetProviderByCategoryAndRule Debug ===")
-	log.Printf("Searching for: Category=%s, Method=%s, CountryCode=%s", category, method, countryCode)
-	log.Printf("Organization: %s", application.Organization)
-
 	providers, err := GetProviders(application.Organization)
 	if err != nil {
-		log.Printf("ERROR getting providers: %v", err)
 		return nil, err
 	}
-	log.Printf("Found %d total providers in organization", len(providers))
 
 	m := map[string]*Provider{}
 	for _, provider := range providers {
-		log.Printf("Checking provider: Name=%s, Category=%s", provider.Name, provider.Category)
 		if provider.Category != category {
-			log.Printf("  -> Skipping: category mismatch")
 			continue
 		}
-		log.Printf("  -> Adding to map: category matches")
+
 		m[provider.Name] = provider
 	}
-	log.Printf("Providers map for category '%s' has %d entries", category, len(m))
 
-	for i, providerItem := range application.Providers {
-		log.Printf("Checking application provider[%d]: Name=%s, Rule=%s, CountryCodes=%v", i, providerItem.Name, providerItem.Rule, providerItem.CountryCodes)
-
+	for _, providerItem := range application.Providers {
 		if providerItem.Provider != nil && providerItem.Provider.Category == "SMS" {
-			log.Printf("  -> SMS provider, checking country code match...")
 			if !isProviderItemCountryCodeMatched(providerItem, countryCode) {
-				log.Printf("  -> Country code mismatch, skipping")
 				continue
 			}
-			log.Printf("  -> Country code matched")
 		}
 
-		ruleMatched := providerItem.Rule == method || providerItem.Rule == "" || providerItem.Rule == "All" || providerItem.Rule == "all" || providerItem.Rule == "None"
-		log.Printf("  -> Rule check: providerItem.Rule='%s', method='%s', ruleMatched=%v", providerItem.Rule, method, ruleMatched)
-
-		if ruleMatched {
+		if providerItem.Rule == method || providerItem.Rule == "" || providerItem.Rule == "All" || providerItem.Rule == "all" || providerItem.Rule == "None" {
 			if provider, ok := m[providerItem.Name]; ok {
-				log.Printf("  -> MATCH FOUND! Returning provider: %s", provider.Name)
-				log.Printf("=== End GetProviderByCategoryAndRule Debug ===")
 				return provider, nil
-			} else {
-				log.Printf("  -> Rule matched but provider not found in map")
 			}
 		}
 	}
 
-	log.Printf("No matching provider found")
-	log.Printf("=== End GetProviderByCategoryAndRule Debug ===")
 	return nil, nil
 }
 

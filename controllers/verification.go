@@ -334,31 +334,13 @@ func (c *ApiController) SendVerificationCode() {
 		}
 
 		provider, err = application.GetSmsProvider(vform.Method, vform.CountryCode)
-		log.Printf("=== SMS Provider Debug Info ===")
-		log.Printf("Method: %s, CountryCode: %s, ApplicationName: %s", vform.Method, vform.CountryCode, application.Name)
-		log.Printf("Application.Organization: %s", application.Organization)
-		log.Printf("Number of providers in application: %d", len(application.Providers))
-		for i, p := range application.Providers {
-			log.Printf("Provider[%d]: Name=%s, Rule=%s, CountryCodes=%v", i, p.Name, p.Rule, p.CountryCodes)
-			if p.Provider != nil {
-				log.Printf("  -> Provider details: Category=%s, Type=%s", p.Provider.Category, p.Provider.Type)
-			} else {
-				log.Printf("  -> Provider is nil")
-			}
-		}
-		log.Printf("=== End SMS Provider Debug Info ===")
-
 		if err != nil {
-			log.Printf("ERROR in GetSmsProvider: %v", err)
 			c.ResponseError(err.Error())
 			return
 		}
 		if provider == nil {
-			log.Printf("ERROR: SMS provider is nil after GetSmsProvider call")
 			c.ResponseError(fmt.Sprintf(c.T("verification:please add a SMS provider to the \"Providers\" list for the application: %s"), application.Name))
 			return
-		} else {
-			log.Printf("SUCCESS: Found SMS provider: %s (Category: %s, Type: %s)", provider.Name, provider.Category, provider.Type)
 		}
 
 		if phone, ok := util.GetE164Number(vform.Dest, vform.CountryCode); !ok {
@@ -535,7 +517,7 @@ func (c *ApiController) VerifyCode() {
 
 	var user *object.User
 	if authForm.Name != "" {
-		user, err = object.GetUserByFields(authForm.Organization, authForm.Name)
+		user, err = object.GetUserByFieldsWithUnifiedIdentity(authForm.Organization, authForm.Name)
 		if err != nil {
 			c.ResponseError(err.Error())
 			return
@@ -554,7 +536,7 @@ func (c *ApiController) VerifyCode() {
 		}
 	}
 
-	if user, err = object.GetUserByFields(authForm.Organization, authForm.Username); err != nil {
+	if user, err = object.GetUserByFieldsWithUnifiedIdentity(authForm.Organization, authForm.Username); err != nil {
 		c.ResponseError(err.Error())
 		return
 	} else if user == nil {

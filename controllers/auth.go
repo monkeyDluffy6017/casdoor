@@ -20,7 +20,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -467,9 +466,6 @@ func (c *ApiController) Login() {
 				}
 			}
 		} else if authForm.Password == "" {
-			log.Printf("=== Login Verification Code Debug ===")
-			log.Printf("Login attempt - Organization: %s, Username: %s", authForm.Organization, authForm.Username)
-
 			// First, get application to check if verification code login is enabled
 			var application *object.Application
 			application, err = object.GetApplication(fmt.Sprintf("admin/%s", authForm.Application))
@@ -496,20 +492,15 @@ func (c *ApiController) Login() {
 			// Check if user exists
 			var userExists bool
 			if user, err = object.GetUserByFieldsWithUnifiedIdentity(authForm.Organization, authForm.Username); err != nil {
-				log.Printf("ERROR getting user: %v", err)
 				c.ResponseError(err.Error(), nil)
 				return
 			} else if user == nil {
-				log.Printf("User not found for Organization: %s, Username: %s", authForm.Organization, authForm.Username)
 				userExists = false
 			} else {
-				log.Printf("User found: ID=%s, Name=%s, Phone=%s, Email=%s", user.GetId(), user.Name, user.Phone, user.Email)
 				userExists = true
 			}
 
 			// STEP 1: Always verify the verification code first (regardless of user existence)
-			log.Printf("Step 1: Verifying verification code for type: %s", verificationCodeType)
-
 			var checkDest string
 			if verificationCodeType == object.VerifyTypePhone {
 				if userExists {
@@ -522,7 +513,6 @@ func (c *ApiController) Login() {
 					c.ResponseError(fmt.Sprintf(c.T("verification:Phone number is invalid in your region %s"), authForm.CountryCode))
 					return
 				}
-				log.Printf("Phone conversion: Original=%s, E164=%s, CountryCode=%s", authForm.Username, checkDest, authForm.CountryCode)
 			} else {
 				checkDest = authForm.Username
 			}
@@ -547,12 +537,9 @@ func (c *ApiController) Login() {
 					return
 				}
 			}
-			log.Printf("Step 1 Complete: Verification code is valid")
 
 			// STEP 2: Handle user creation if needed (only after verification code is confirmed valid)
 			if !userExists {
-				log.Printf("Step 2: Creating new user since verification code is valid")
-
 				// Verification code is valid, create new user
 				user = &object.User{
 					Owner:       authForm.Organization,
@@ -567,7 +554,6 @@ func (c *ApiController) Login() {
 				if verificationCodeType == object.VerifyTypePhone {
 					user.Phone = checkDest
 					user.CountryCode = authForm.CountryCode
-					log.Printf("Setting user.Phone to: %s (E164 format)", checkDest)
 				} else if verificationCodeType == object.VerifyTypeEmail {
 					user.Email = checkDest
 					user.EmailVerified = true
@@ -579,20 +565,15 @@ func (c *ApiController) Login() {
 					primaryProvider = "Email"
 				}
 
-				log.Printf("Creating user: Owner=%s, Name=%s, Phone=%s, DisplayName=%s", user.Owner, user.Name, user.Phone, user.DisplayName)
 				affected, err := object.AddUser(user, c.GetAcceptLanguage(), primaryProvider)
 				if err != nil {
-					log.Printf("ERROR creating user: %v", err)
 					c.ResponseError(fmt.Sprintf(c.T("user:Failed to create user: %s"), err.Error()))
 					return
 				}
 				if !affected {
-					log.Printf("ERROR: User creation not affected")
 					c.ResponseError(c.T("user:Failed to create user"))
 					return
 				}
-				log.Printf("User created successfully with ID: %s", user.GetId())
-				log.Printf("Step 2 Complete: User creation finished")
 			}
 
 			// STEP 3: Disable the verification code (it's been used)
@@ -601,7 +582,6 @@ func (c *ApiController) Login() {
 				c.ResponseError(err.Error(), nil)
 				return
 			}
-			log.Printf("Step 3 Complete: Verification code disabled")
 
 			// STEP 4: Set verification type for later processing
 			if verificationCodeType == object.VerifyTypePhone {
@@ -617,7 +597,6 @@ func (c *ApiController) Login() {
 					}
 				}
 			}
-			log.Printf("Login verification code process complete, proceeding with login")
 		} else {
 			var application *object.Application
 			application, err = object.GetApplication(fmt.Sprintf("admin/%s", authForm.Application))
