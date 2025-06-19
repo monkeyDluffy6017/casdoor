@@ -307,7 +307,16 @@ func (c *ApiController) SendVerificationCode() {
 				log.Println(c.T("verification:the user does not exist, sign up first"))
 			}
 
-			vform.CountryCode = user.GetCountryCode(vform.CountryCode)
+			// 修复：当用户不存在时，提供默认的CountryCode
+			if user != nil {
+				vform.CountryCode = user.GetCountryCode(vform.CountryCode)
+			} else {
+				// 用户不存在时，如果前端没有提供CountryCode，则使用默认值
+				if vform.CountryCode == "" {
+					vform.CountryCode = "CN" // 默认使用中国区号
+				}
+			}
+
 		} else if vform.Method == ResetVerification || vform.Method == MfaSetupVerification {
 			if vform.CountryCode == "" {
 				if user = c.getCurrentUser(); user != nil {
@@ -325,13 +334,31 @@ func (c *ApiController) SendVerificationCode() {
 		}
 
 		provider, err = application.GetSmsProvider(vform.Method, vform.CountryCode)
+		log.Printf("=== SMS Provider Debug Info ===")
+		log.Printf("Method: %s, CountryCode: %s, ApplicationName: %s", vform.Method, vform.CountryCode, application.Name)
+		log.Printf("Application.Organization: %s", application.Organization)
+		log.Printf("Number of providers in application: %d", len(application.Providers))
+		for i, p := range application.Providers {
+			log.Printf("Provider[%d]: Name=%s, Rule=%s, CountryCodes=%v", i, p.Name, p.Rule, p.CountryCodes)
+			if p.Provider != nil {
+				log.Printf("  -> Provider details: Category=%s, Type=%s", p.Provider.Category, p.Provider.Type)
+			} else {
+				log.Printf("  -> Provider is nil")
+			}
+		}
+		log.Printf("=== End SMS Provider Debug Info ===")
+
 		if err != nil {
+			log.Printf("ERROR in GetSmsProvider: %v", err)
 			c.ResponseError(err.Error())
 			return
 		}
 		if provider == nil {
+			log.Printf("ERROR: SMS provider is nil after GetSmsProvider call")
 			c.ResponseError(fmt.Sprintf(c.T("verification:please add a SMS provider to the \"Providers\" list for the application: %s"), application.Name))
 			return
+		} else {
+			log.Printf("SUCCESS: Found SMS provider: %s (Category: %s, Type: %s)", provider.Name, provider.Category, provider.Type)
 		}
 
 		if phone, ok := util.GetE164Number(vform.Dest, vform.CountryCode); !ok {
@@ -508,7 +535,7 @@ func (c *ApiController) VerifyCode() {
 
 	var user *object.User
 	if authForm.Name != "" {
-		user, err = object.GetUserByFieldsWithUnifiedIdentity(authForm.Organization, authForm.Name)
+		user, err = object.GetUserByFields(authForm.Organization, authForm.Name)
 		if err != nil {
 			c.ResponseError(err.Error())
 			return
@@ -527,31 +554,31 @@ func (c *ApiController) VerifyCode() {
 		}
 	}
 
-	// Try to find the user first
-	if user, err = object.GetUserByFieldsWithUnifiedIdentity(authForm.Organization, authForm.Username); err != nil {
+	if user, err = object.GetUserByFields(authForm.Organization, authForm.Username); err != nil {
 		c.ResponseError(err.Error())
+		return
+	} else if user == nil {
+		c.ResponseError(fmt.Sprintf(c.T("general:The user: %s doesn't exist"), util.GetId(authForm.Organization, authForm.Username)))
 		return
 	}
 
-	// If user doesn't exist, automatically create user based on verification type
-	if user == nil {
-		verificationCodeType := object.GetVerifyType(authForm.Username)
-
-		// Verify the verification code first to ensure it's valid before creating user
-		if verificationCodeType == object.VerifyTypePhone {
-			if authForm.CountryCode == "" {
-				authForm.CountryCode = "CN" // Default country code
-			}
-			var ok bool
-			if checkDest, ok = util.GetE164Number(authForm.Username, authForm.CountryCode); !ok {
-				c.ResponseError(fmt.Sprintf(c.T("verification:Phone number is invalid in your region %s"), authForm.CountryCode))
-				return
-			}
-		} else {
-			checkDest = authForm.Username
+	verificationCodeType := object.GetVerifyType(authForm.Username)
+	if verificationCodeType == object.VerifyTypePhone {
+		authForm.CountryCode = user.GetCountryCode(authForm.CountryCode)
+		var ok bool
+		if checkDest, ok = util.GetE164Number(authForm.Username, authForm.CountryCode); !ok {
+			c.ResponseError(fmt.Sprintf(c.T("verification:Phone number is invalid in your region %s"), authForm.CountryCode))
+			return
 		}
+	}
 
-		// Verify the verification code
+	passed, err := c.checkOrgMasterVerificationCode(user, authForm.Code)
+	if err != nil {
+		c.ResponseError(c.T(err.Error()))
+		return
+	}
+
+	if !passed {
 		result, err := object.CheckVerificationCode(checkDest, authForm.Code, c.GetAcceptLanguage())
 		if err != nil {
 			c.ResponseError(err.Error())
@@ -562,81 +589,10 @@ func (c *ApiController) VerifyCode() {
 			return
 		}
 
-		// Verification code is valid, create new user
-		user = &object.User{
-			Owner:       authForm.Organization,
-			Name:        util.GenerateId(),
-			DisplayName: authForm.Username,
-			Type:        "normal-user",
-			CreatedTime: util.GetCurrentTime(),
-			UpdatedTime: util.GetCurrentTime(),
-		}
-
-		// Set user fields based on verification type
-		if verificationCodeType == object.VerifyTypePhone {
-			user.Phone = checkDest
-			user.CountryCode = authForm.CountryCode
-		} else if verificationCodeType == object.VerifyTypeEmail {
-			user.Email = checkDest
-			user.EmailVerified = true
-		}
-
-		// Create user with SMS or Email as primary provider
-		primaryProvider := "SMS"
-		if verificationCodeType == object.VerifyTypeEmail {
-			primaryProvider = "Email"
-		}
-
-		affected, err := object.AddUser(user, c.GetAcceptLanguage(), primaryProvider)
-		if err != nil {
-			c.ResponseError(fmt.Sprintf(c.T("user:Failed to create user: %s"), err.Error()))
-			return
-		}
-		if !affected {
-			c.ResponseError(c.T("user:Failed to create user"))
-			return
-		}
-
-		// Disable verification code (since it was already verified when creating user)
 		err = object.DisableVerificationCode(checkDest)
 		if err != nil {
 			c.ResponseError(err.Error())
 			return
-		}
-	} else {
-		// User exists, process with original logic
-		verificationCodeType := object.GetVerifyType(authForm.Username)
-		if verificationCodeType == object.VerifyTypePhone {
-			authForm.CountryCode = user.GetCountryCode(authForm.CountryCode)
-			var ok bool
-			if checkDest, ok = util.GetE164Number(authForm.Username, authForm.CountryCode); !ok {
-				c.ResponseError(fmt.Sprintf(c.T("verification:Phone number is invalid in your region %s"), authForm.CountryCode))
-				return
-			}
-		}
-
-		passed, err := c.checkOrgMasterVerificationCode(user, authForm.Code)
-		if err != nil {
-			c.ResponseError(c.T(err.Error()))
-			return
-		}
-
-		if !passed {
-			result, err := object.CheckVerificationCode(checkDest, authForm.Code, c.GetAcceptLanguage())
-			if err != nil {
-				c.ResponseError(err.Error())
-				return
-			}
-			if result.Code != object.VerificationSuccess {
-				c.ResponseError(result.Msg)
-				return
-			}
-
-			err = object.DisableVerificationCode(checkDest)
-			if err != nil {
-				c.ResponseError(err.Error())
-				return
-			}
 		}
 	}
 
