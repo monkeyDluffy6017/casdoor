@@ -1,23 +1,23 @@
-# 短信验证码服务
+# SMS Verification Code Service
 
-这是一个为Casdoor提供短信验证码功能的HTTP服务。
+This is an HTTP service that provides SMS verification code functionality for Casdoor.
 
-## 功能特性
+## Features
 
-- 提供POST接口用于发送短信验证码
-- 支持JSON和表单数据格式
-- 包含健康检查接口
-- 详细的日志记录
-- CORS支持
+- Provides POST interface for sending SMS verification codes
+- Supports JSON and form data formats
+- Includes health check interface
+- Detailed logging
+- CORS support
 
-## 接口说明
+## API Documentation
 
-### 1. 发送短信验证码
+### 1. Send SMS Verification Code
 - **URL**: `POST /oidc_auth/send/sms`
-- **端口**: `8083`
-- **请求格式**: JSON或表单数据
+- **Port**: `8083`
+- **Request Format**: JSON or form data
 
-#### JSON格式请求示例：
+#### JSON Request Example:
 ```json
 {
     "phone": "13800138000",
@@ -25,17 +25,17 @@
 }
 ```
 
-#### 表单数据请求示例：
+#### Form Data Request Example:
 ```bash
 curl -X POST http://localhost:8083/oidc_auth/send/sms \
   -d "phone=13800138000&code=123456"
 ```
 
-#### 响应示例：
+#### Response Example:
 ```json
 {
     "success": true,
-    "message": "验证码已成功发送到手机号 13800138000",
+    "message": "Verification code has been successfully sent to phone number 13800138000",
     "data": {
         "phone": "13800138000",
         "code": "123456",
@@ -44,60 +44,60 @@ curl -X POST http://localhost:8083/oidc_auth/send/sms \
 }
 ```
 
-### 2. 健康检查
+### 2. Health Check
 - **URL**: `GET /health`
-- **响应示例**:
+- **Response Example**:
 ```json
 {
     "status": "ok",
     "time": "2024-01-01 12:00:00",
-    "service": "SMS验证码服务"
+    "service": "SMS Verification Code Service"
 }
 ```
 
-## 启动服务
+## Start Service
 
 ```bash
 cd test/sms-service
 go run main.go
 ```
 
-服务启动后会在控制台显示：
+After starting the service, it will display in the console:
 ```
-短信验证码服务启动，监听端口: :8083
-短信发送接口: POST http://localhost:8083/oidc_auth/send/sms
-健康检查接口: GET http://localhost:8083/health
+SMS verification code service started, listening on port: :8083
+SMS sending interface: POST http://localhost:8083/oidc_auth/send/sms
+Health check interface: GET http://localhost:8083/health
 ```
 
-## 在Casdoor中配置
+## Configuration in Casdoor
 
-在Casdoor管理界面中创建SMS提供商时，配置如下：
+When creating an SMS provider in the Casdoor management interface, configure as follows:
 
-- **类型**: Custom HTTP SMS
-- **地址节点**: `http://localhost:8083/oidc_auth/send/sms`
-- **方法**: POST
-- **参数**: code (可选配置phone参数)
+- **Type**: Custom HTTP SMS
+- **Endpoint**: `http://localhost:8083/oidc_auth/send/sms`
+- **Method**: POST
+- **Parameters**: code (optional phone parameter configuration)
 
-## 测试
+## Testing
 
-### 使用curl测试：
+### Testing with curl:
 ```bash
-# JSON格式
+# JSON format
 curl -X POST http://localhost:8083/oidc_auth/send/sms \
   -H "Content-Type: application/json" \
   -d '{"phone":"13800138000","code":"123456"}'
 
-# 表单格式
+# Form format
 curl -X POST http://localhost:8083/oidc_auth/send/sms \
   -d "phone=13800138000&code=123456"
 
-# 健康检查
+# Health check
 curl http://localhost:8083/health
 ```
 
-## 注意事项
+## Notes
 
-1. 这是一个模拟服务，实际发送短信需要集成真实的短信服务商API（如阿里云、腾讯云等）
-2. 当前版本仅记录日志，不会真正发送短信
-3. 服务支持CORS，可以被前端直接调用
-4. 建议在生产环境中添加更多的安全验证和错误处理
+1. This is a mock service. For actual SMS sending, you need to integrate with real SMS service provider APIs (such as Alibaba Cloud, Tencent Cloud, etc.)
+2. The current version only logs and does not actually send SMS
+3. The service supports CORS and can be called directly by the frontend
+4. It is recommended to add more security verification and error handling in the production environment

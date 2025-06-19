@@ -307,13 +307,13 @@ func (c *ApiController) SendVerificationCode() {
 				log.Println(c.T("verification:the user does not exist, sign up first"))
 			}
 
-			// 修复：当用户不存在时，提供默认的CountryCode
+			// Fix: provide default CountryCode when user does not exist
 			if user != nil {
 				vform.CountryCode = user.GetCountryCode(vform.CountryCode)
 			} else {
-				// 用户不存在时，如果前端没有提供CountryCode，则使用默认值
+				// When user does not exist, use default value if frontend doesn't provide CountryCode
 				if vform.CountryCode == "" {
-					vform.CountryCode = "CN" // 默认使用中国区号
+					vform.CountryCode = "CN" // Default to China country code
 				}
 			}
 
