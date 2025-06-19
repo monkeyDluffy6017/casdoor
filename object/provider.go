@@ -16,7 +16,6 @@ package object
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 
@@ -122,21 +121,11 @@ func GetGlobalProviderCount(field, value string) (int64, error) {
 }
 
 func GetProviders(owner string) ([]*Provider, error) {
-	log.Printf("=== GetProviders Debug ===")
-	log.Printf("Searching for providers with owner: %s", owner)
-
 	providers := []*Provider{}
 	err := ormer.Engine.Where("owner = ? or owner = ? ", "admin", owner).Desc("created_time").Find(&providers, &Provider{})
 	if err != nil {
-		log.Printf("ERROR in GetProviders: %v", err)
 		return providers, err
 	}
-
-	log.Printf("Found %d providers", len(providers))
-	for i, provider := range providers {
-		log.Printf("Provider[%d]: Owner=%s, Name=%s, Category=%s, Type=%s", i, provider.Owner, provider.Name, provider.Category, provider.Type)
-	}
-	log.Printf("=== End GetProviders Debug ===")
 
 	return providers, nil
 }
